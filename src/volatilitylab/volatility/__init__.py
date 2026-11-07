@@ -1,15 +1,15 @@
 """Volatility analysis: implied volatility, surfaces, and forecasting."""
 
 from volatilitylab.volatility.implied_vol import (
+    ImpliedVolResult,
     ImpliedVolSolver,
     implied_volatility,
-    ImpliedVolResult,
 )
 from volatilitylab.volatility.surface import (
-    VolatilitySurface,
-    SurfacePoint,
     SmileSlice,
+    SurfacePoint,
     TermStructurePoint,
+    VolatilitySurface,
 )
 
 __all__ = [

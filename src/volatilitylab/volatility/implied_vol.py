@@ -12,18 +12,18 @@ No-arbitrage bounds for European options:
 """
 
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from typing import NamedTuple
 
 import numpy as np
-from numpy.typing import NDArray
 from scipy import optimize
 
 from volatilitylab.pricing.black_scholes import OptionType, black_scholes_price
 
 
-class IVStatus(str, Enum):
+class IVStatus(StrEnum):
     """Status of implied volatility calculation."""
+
     SUCCESS = "success"
     NO_SOLUTION = "no_solution"
     ARBITRAGE_VIOLATION = "arbitrage_violation"
@@ -33,6 +33,7 @@ class IVStatus(str, Enum):
 
 class ArbitrageBounds(NamedTuple):
     """No-arbitrage price bounds."""
+
     lower: float
     upper: float
     forward: float
@@ -42,6 +43,7 @@ class ArbitrageBounds(NamedTuple):
 @dataclass(frozen=True)
 class ImpliedVolResult:
     """Result container for implied volatility calculation."""
+
     iv: float | None
     status: IVStatus
     price_error: float | None
@@ -60,7 +62,7 @@ def _compute_arbitrage_bounds(
 ) -> ArbitrageBounds:
     """
     Compute no-arbitrage price bounds for European options.
-    
+
     Returns
     -------
     ArbitrageBounds
@@ -69,7 +71,7 @@ def _compute_arbitrage_bounds(
     discount = np.exp(-risk_free_rate * time_to_expiry)
     forward_discount = np.exp(-dividend_yield * time_to_expiry)
     forward = spot * np.exp((risk_free_rate - dividend_yield) * time_to_expiry)
-    
+
     if option_type == OptionType.CALL:
         # Call bounds: max(0, S*e^(-qT) - K*e^(-rT)) ≤ C ≤ S*e^(-qT)
         intrinsic = max(0, spot * forward_discount - strike * discount)
@@ -78,7 +80,7 @@ def _compute_arbitrage_bounds(
         # Put bounds: max(0, K*e^(-rT) - S*e^(-qT)) ≤ P ≤ K*e^(-rT)
         intrinsic = max(0, strike * discount - spot * forward_discount)
         upper = strike * discount
-    
+
     return ArbitrageBounds(
         lower=intrinsic,
         upper=upper,
@@ -101,7 +103,7 @@ def implied_volatility(
 ) -> float | None:
     """
     Calculate implied volatility using Brent's method.
-    
+
     Parameters
     ----------
     price : float
@@ -124,15 +126,22 @@ def implied_volatility(
         Price tolerance for convergence
     max_iterations : int
         Maximum solver iterations
-        
+
     Returns
     -------
     float or None
         Implied volatility if found, None otherwise
     """
     result = ImpliedVolSolver().solve(
-        price, spot, strike, time_to_expiry, risk_free_rate,
-        option_type, dividend_yield, tolerance, max_iterations
+        price,
+        spot,
+        strike,
+        time_to_expiry,
+        risk_free_rate,
+        option_type,
+        dividend_yield,
+        tolerance,
+        max_iterations,
     )
     return result.iv
 
@@ -140,13 +149,13 @@ def implied_volatility(
 class ImpliedVolSolver:
     """
     Robust implied volatility solver with diagnostics.
-    
+
     Uses Brent's method for root finding with careful handling of:
     - No-arbitrage bound violations
     - Near-expiry options
     - Deep ITM/OTM options
     - Numerical edge cases
-    
+
     Example
     -------
     >>> solver = ImpliedVolSolver()
@@ -157,11 +166,11 @@ class ImpliedVolSolver:
     >>> if result.status == IVStatus.SUCCESS:
     ...     print(f"IV: {result.iv:.2%}")
     """
-    
+
     # Volatility search bounds
     VOL_MIN = 1e-6
     VOL_MAX = 5.0  # 500% annualized
-    
+
     def solve(
         self,
         price: float,
@@ -176,7 +185,7 @@ class ImpliedVolSolver:
     ) -> ImpliedVolResult:
         """
         Solve for implied volatility with full diagnostics.
-        
+
         Returns
         -------
         ImpliedVolResult
@@ -185,103 +194,154 @@ class ImpliedVolSolver:
         # Input validation
         if spot <= 0 or strike <= 0:
             return ImpliedVolResult(
-                iv=None, status=IVStatus.INVALID_INPUT, price_error=None, iterations=0,
-                bounds=ArbitrageBounds(0, 0, 0, 0), message="Spot and strike must be positive"
+                iv=None,
+                status=IVStatus.INVALID_INPUT,
+                price_error=None,
+                iterations=0,
+                bounds=ArbitrageBounds(0, 0, 0, 0),
+                message="Spot and strike must be positive",
             )
         if time_to_expiry < 0:
             return ImpliedVolResult(
-                iv=None, status=IVStatus.INVALID_INPUT, price_error=None, iterations=0,
-                bounds=ArbitrageBounds(0, 0, 0, 0), message="Time to expiry cannot be negative"
+                iv=None,
+                status=IVStatus.INVALID_INPUT,
+                price_error=None,
+                iterations=0,
+                bounds=ArbitrageBounds(0, 0, 0, 0),
+                message="Time to expiry cannot be negative",
             )
         if price <= 0:
             return ImpliedVolResult(
-                iv=None, status=IVStatus.INVALID_INPUT, price_error=None, iterations=0,
-                bounds=ArbitrageBounds(0, 0, 0, 0), message="Price must be positive"
+                iv=None,
+                status=IVStatus.INVALID_INPUT,
+                price_error=None,
+                iterations=0,
+                bounds=ArbitrageBounds(0, 0, 0, 0),
+                message="Price must be positive",
             )
-        
+
         # Compute no-arbitrage bounds
         bounds = _compute_arbitrage_bounds(
             spot, strike, time_to_expiry, risk_free_rate, dividend_yield, option_type
         )
-        
+
         # Check arbitrage bounds
         if price < bounds.lower - tolerance:
             return ImpliedVolResult(
-                iv=None, status=IVStatus.ARBITRAGE_VIOLATION, price_error=None, iterations=0,
-                bounds=bounds, message=f"Price {price:.4f} below intrinsic value {bounds.lower:.4f}"
+                iv=None,
+                status=IVStatus.ARBITRAGE_VIOLATION,
+                price_error=None,
+                iterations=0,
+                bounds=bounds,
+                message=f"Price {price:.4f} below intrinsic value {bounds.lower:.4f}",
             )
         if price > bounds.upper + tolerance:
             return ImpliedVolResult(
-                iv=None, status=IVStatus.ARBITRAGE_VIOLATION, price_error=None, iterations=0,
-                bounds=bounds, message=f"Price {price:.4f} above upper bound {bounds.upper:.4f}"
+                iv=None,
+                status=IVStatus.ARBITRAGE_VIOLATION,
+                price_error=None,
+                iterations=0,
+                bounds=bounds,
+                message=f"Price {price:.4f} above upper bound {bounds.upper:.4f}",
             )
-        
+
         # Handle near-expiry case
         if time_to_expiry < 1e-6:
             return ImpliedVolResult(
-                iv=None, status=IVStatus.NO_SOLUTION, price_error=None, iterations=0,
-                bounds=bounds, message="At expiry: IV undefined"
+                iv=None,
+                status=IVStatus.NO_SOLUTION,
+                price_error=None,
+                iterations=0,
+                bounds=bounds,
+                message="At expiry: IV undefined",
             )
-        
+
         # Define objective function
         def objective(vol: float) -> float:
             model_price = black_scholes_price(
                 spot, strike, time_to_expiry, risk_free_rate, vol, option_type, dividend_yield
             )
             return model_price - price
-        
+
         # Check boundary values
         try:
             f_low = objective(self.VOL_MIN)
             f_high = objective(self.VOL_MAX)
         except Exception:
             return ImpliedVolResult(
-                iv=None, status=IVStatus.CONVERGENCE_FAILED, price_error=None, iterations=0,
-                bounds=bounds, message="Failed to evaluate objective at boundaries"
+                iv=None,
+                status=IVStatus.CONVERGENCE_FAILED,
+                price_error=None,
+                iterations=0,
+                bounds=bounds,
+                message="Failed to evaluate objective at boundaries",
             )
-        
+
         # Check if solution exists in interval
         if f_low * f_high > 0:
             # No sign change - check if price is at boundary
             if abs(f_low) < tolerance:
                 return ImpliedVolResult(
-                    iv=self.VOL_MIN, status=IVStatus.SUCCESS, price_error=abs(f_low),
-                    iterations=1, bounds=bounds, message="Near minimum volatility"
+                    iv=self.VOL_MIN,
+                    status=IVStatus.SUCCESS,
+                    price_error=abs(f_low),
+                    iterations=1,
+                    bounds=bounds,
+                    message="Near minimum volatility",
                 )
             if abs(f_high) < tolerance:
                 return ImpliedVolResult(
-                    iv=self.VOL_MAX, status=IVStatus.SUCCESS, price_error=abs(f_high),
-                    iterations=1, bounds=bounds, message="Near maximum volatility"
+                    iv=self.VOL_MAX,
+                    status=IVStatus.SUCCESS,
+                    price_error=abs(f_high),
+                    iterations=1,
+                    bounds=bounds,
+                    message="Near maximum volatility",
                 )
             return ImpliedVolResult(
-                iv=None, status=IVStatus.NO_SOLUTION, price_error=None, iterations=0,
-                bounds=bounds, message="No volatility in valid range produces target price"
+                iv=None,
+                status=IVStatus.NO_SOLUTION,
+                price_error=None,
+                iterations=0,
+                bounds=bounds,
+                message="No volatility in valid range produces target price",
             )
-        
+
         # Solve using Brent's method
         try:
             result = optimize.brentq(
-                objective, self.VOL_MIN, self.VOL_MAX,
-                xtol=tolerance, maxiter=max_iterations, full_output=True
+                objective,
+                self.VOL_MIN,
+                self.VOL_MAX,
+                xtol=tolerance,
+                maxiter=max_iterations,
+                full_output=True,
             )
             iv, info = result[0], result[1]
-            
+
             # Verify solution
             final_price = black_scholes_price(
                 spot, strike, time_to_expiry, risk_free_rate, iv, option_type, dividend_yield
             )
             error = abs(final_price - price)
-            
+
             return ImpliedVolResult(
-                iv=iv, status=IVStatus.SUCCESS, price_error=error,
-                iterations=info.iterations, bounds=bounds
+                iv=iv,
+                status=IVStatus.SUCCESS,
+                price_error=error,
+                iterations=info.iterations,
+                bounds=bounds,
             )
         except ValueError as e:
             return ImpliedVolResult(
-                iv=None, status=IVStatus.CONVERGENCE_FAILED, price_error=None, iterations=0,
-                bounds=bounds, message=str(e)
+                iv=None,
+                status=IVStatus.CONVERGENCE_FAILED,
+                price_error=None,
+                iterations=0,
+                bounds=bounds,
+                message=str(e),
             )
-    
+
     def solve_bid_ask_mid(
         self,
         bid: float,
@@ -296,29 +356,47 @@ class ImpliedVolSolver:
     ) -> dict[str, ImpliedVolResult]:
         """
         Calculate bid, ask, and mid implied volatilities.
-        
+
         Returns
         -------
         dict
             Keys: 'bid_iv', 'ask_iv', 'mid_iv' with ImpliedVolResult values
         """
         mid = (bid + ask) / 2
-        
+
         return {
-            'bid_iv': self.solve(
-                bid, spot, strike, time_to_expiry, risk_free_rate,
-                option_type, dividend_yield, tolerance
+            "bid_iv": self.solve(
+                bid,
+                spot,
+                strike,
+                time_to_expiry,
+                risk_free_rate,
+                option_type,
+                dividend_yield,
+                tolerance,
             ),
-            'ask_iv': self.solve(
-                ask, spot, strike, time_to_expiry, risk_free_rate,
-                option_type, dividend_yield, tolerance
+            "ask_iv": self.solve(
+                ask,
+                spot,
+                strike,
+                time_to_expiry,
+                risk_free_rate,
+                option_type,
+                dividend_yield,
+                tolerance,
             ),
-            'mid_iv': self.solve(
-                mid, spot, strike, time_to_expiry, risk_free_rate,
-                option_type, dividend_yield, tolerance
+            "mid_iv": self.solve(
+                mid,
+                spot,
+                strike,
+                time_to_expiry,
+                risk_free_rate,
+                option_type,
+                dividend_yield,
+                tolerance,
             ),
         }
-    
+
     def round_trip_check(
         self,
         iv: float,
@@ -332,7 +410,7 @@ class ImpliedVolSolver:
     ) -> tuple[bool, float]:
         """
         Verify IV round-trip: IV → Price → IV matches original.
-        
+
         Returns
         -------
         tuple[bool, float]
@@ -342,15 +420,21 @@ class ImpliedVolSolver:
         price = black_scholes_price(
             spot, strike, time_to_expiry, risk_free_rate, iv, option_type, dividend_yield
         )
-        
+
         # Solve back to IV
         result = self.solve(
-            price, spot, strike, time_to_expiry, risk_free_rate,
-            option_type, dividend_yield, tolerance
+            price,
+            spot,
+            strike,
+            time_to_expiry,
+            risk_free_rate,
+            option_type,
+            dividend_yield,
+            tolerance,
         )
-        
+
         if result.iv is None:
-            return False, float('inf')
-        
+            return False, float("inf")
+
         error = abs(result.iv - iv)
         return error < tolerance, error

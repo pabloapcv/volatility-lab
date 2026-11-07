@@ -10,11 +10,10 @@ Tracks ML experiments with:
 
 import hashlib
 import json
-from dataclasses import dataclass, field, asdict
-from datetime import datetime, timezone
-from pathlib import Path
-from typing import Any
 import uuid
+from dataclasses import asdict, dataclass
+from datetime import UTC, datetime
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -23,6 +22,7 @@ import pandas as pd
 @dataclass
 class ModelResult:
     """Results for a single model."""
+
     model_name: str
     model_type: str
     params: dict
@@ -34,6 +34,7 @@ class ModelResult:
 @dataclass
 class HypothesisTestResult:
     """Results of hypothesis testing."""
+
     hypothesis: str
     result: str
     details: dict
@@ -43,32 +44,33 @@ class HypothesisTestResult:
 @dataclass
 class ExperimentResult:
     """Complete experiment result."""
+
     experiment_id: str
     created_at: str
     symbol: str
     config: dict
     data_hash: str
     seed: int
-    
+
     # Model results
     models: list[ModelResult]
-    
+
     # DM test results
     dm_comparisons_5d: list[dict]
     dm_comparisons_20d: list[dict]
-    
+
     # Bootstrap CIs
     bootstrap_cis: dict
-    
+
     # Hypothesis tests
     hypothesis_tests: list[HypothesisTestResult]
-    
+
     # Regime analysis
     regime_analysis: dict | None = None
-    
+
     # Predictions
     predictions_path: str | None = None
-    
+
     # Status
     status: str = "completed"
     error: str | None = None
@@ -86,7 +88,7 @@ def compute_data_hash(data: pd.DataFrame) -> str:
 class ExperimentTracker:
     """
     Track and persist ML experiments.
-    
+
     Example
     -------
     >>> tracker = ExperimentTracker('./experiments')
@@ -95,11 +97,11 @@ class ExperimentTracker:
     >>> tracker.finish_experiment(exp_id)
     >>> result = tracker.get_experiment(exp_id)
     """
-    
-    def __init__(self, base_dir: str | Path = './experiments'):
+
+    def __init__(self, base_dir: str | Path = "./experiments"):
         """
         Initialize experiment tracker.
-        
+
         Parameters
         ----------
         base_dir : str or Path
@@ -107,9 +109,9 @@ class ExperimentTracker:
         """
         self.base_dir = Path(base_dir)
         self.base_dir.mkdir(parents=True, exist_ok=True)
-        
+
         self._active_experiments: dict[str, dict] = {}
-    
+
     def start_experiment(
         self,
         symbol: str,
@@ -119,36 +121,36 @@ class ExperimentTracker:
     ) -> str:
         """
         Start a new experiment.
-        
+
         Returns
         -------
         str
             Experiment ID
         """
-        exp_id = f"{symbol}_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:8]}"
-        
+        exp_id = f"{symbol}_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:8]}"
+
         data_hash = compute_data_hash(data) if data is not None else "unknown"
-        
+
         self._active_experiments[exp_id] = {
-            'experiment_id': exp_id,
-            'created_at': datetime.now(timezone.utc).isoformat(),
-            'symbol': symbol,
-            'config': config,
-            'data_hash': data_hash,
-            'seed': seed,
-            'models': [],
-            'dm_comparisons_5d': [],
-            'dm_comparisons_20d': [],
-            'bootstrap_cis': {},
-            'hypothesis_tests': [],
-            'regime_analysis': None,
-            'predictions_path': None,
-            'status': 'running',
-            'error': None,
+            "experiment_id": exp_id,
+            "created_at": datetime.now(UTC).isoformat(),
+            "symbol": symbol,
+            "config": config,
+            "data_hash": data_hash,
+            "seed": seed,
+            "models": [],
+            "dm_comparisons_5d": [],
+            "dm_comparisons_20d": [],
+            "bootstrap_cis": {},
+            "hypothesis_tests": [],
+            "regime_analysis": None,
+            "predictions_path": None,
+            "status": "running",
+            "error": None,
         }
-        
+
         return exp_id
-    
+
     def log_model_result(
         self,
         experiment_id: str,
@@ -157,9 +159,9 @@ class ExperimentTracker:
         """Log results for a model."""
         if experiment_id not in self._active_experiments:
             raise ValueError(f"Experiment {experiment_id} not found")
-        
-        self._active_experiments[experiment_id]['models'].append(asdict(model_result))
-    
+
+        self._active_experiments[experiment_id]["models"].append(asdict(model_result))
+
     def log_dm_comparison(
         self,
         experiment_id: str,
@@ -169,10 +171,10 @@ class ExperimentTracker:
         """Log DM test comparison."""
         if experiment_id not in self._active_experiments:
             raise ValueError(f"Experiment {experiment_id} not found")
-        
-        key = f'dm_comparisons_{horizon}d'
+
+        key = f"dm_comparisons_{horizon}d"
         self._active_experiments[experiment_id][key].append(comparison)
-    
+
     def log_bootstrap_ci(
         self,
         experiment_id: str,
@@ -184,10 +186,10 @@ class ExperimentTracker:
         """Log bootstrap confidence interval."""
         if experiment_id not in self._active_experiments:
             raise ValueError(f"Experiment {experiment_id} not found")
-        
+
         key = f"{model}_{horizon}d_{metric}"
-        self._active_experiments[experiment_id]['bootstrap_cis'][key] = ci
-    
+        self._active_experiments[experiment_id]["bootstrap_cis"][key] = ci
+
     def log_hypothesis_test(
         self,
         experiment_id: str,
@@ -199,14 +201,16 @@ class ExperimentTracker:
         """Log hypothesis test result."""
         if experiment_id not in self._active_experiments:
             raise ValueError(f"Experiment {experiment_id} not found")
-        
-        self._active_experiments[experiment_id]['hypothesis_tests'].append({
-            'hypothesis': hypothesis,
-            'result': result,
-            'details': details,
-            'confidence_level': confidence_level,
-        })
-    
+
+        self._active_experiments[experiment_id]["hypothesis_tests"].append(
+            {
+                "hypothesis": hypothesis,
+                "result": result,
+                "details": details,
+                "confidence_level": confidence_level,
+            }
+        )
+
     def log_regime_analysis(
         self,
         experiment_id: str,
@@ -215,9 +219,9 @@ class ExperimentTracker:
         """Log regime-dependent analysis."""
         if experiment_id not in self._active_experiments:
             raise ValueError(f"Experiment {experiment_id} not found")
-        
-        self._active_experiments[experiment_id]['regime_analysis'] = analysis
-    
+
+        self._active_experiments[experiment_id]["regime_analysis"] = analysis
+
     def save_predictions(
         self,
         experiment_id: str,
@@ -226,16 +230,16 @@ class ExperimentTracker:
         """Save predictions to file."""
         if experiment_id not in self._active_experiments:
             raise ValueError(f"Experiment {experiment_id} not found")
-        
+
         exp_dir = self.base_dir / experiment_id
         exp_dir.mkdir(exist_ok=True)
-        
-        pred_path = exp_dir / 'predictions.parquet'
+
+        pred_path = exp_dir / "predictions.parquet"
         predictions.to_parquet(pred_path)
-        
-        self._active_experiments[experiment_id]['predictions_path'] = str(pred_path)
+
+        self._active_experiments[experiment_id]["predictions_path"] = str(pred_path)
         return str(pred_path)
-    
+
     def finish_experiment(
         self,
         experiment_id: str,
@@ -243,7 +247,7 @@ class ExperimentTracker:
     ) -> ExperimentResult:
         """
         Finish and persist experiment.
-        
+
         Returns
         -------
         ExperimentResult
@@ -251,71 +255,71 @@ class ExperimentTracker:
         """
         if experiment_id not in self._active_experiments:
             raise ValueError(f"Experiment {experiment_id} not found")
-        
+
         exp_data = self._active_experiments[experiment_id]
-        exp_data['status'] = 'error' if error else 'completed'
-        exp_data['error'] = error
-        
+        exp_data["status"] = "error" if error else "completed"
+        exp_data["error"] = error
+
         # Convert to ExperimentResult
         result = ExperimentResult(
-            experiment_id=exp_data['experiment_id'],
-            created_at=exp_data['created_at'],
-            symbol=exp_data['symbol'],
-            config=exp_data['config'],
-            data_hash=exp_data['data_hash'],
-            seed=exp_data['seed'],
-            models=[ModelResult(**m) for m in exp_data['models']],
-            dm_comparisons_5d=exp_data['dm_comparisons_5d'],
-            dm_comparisons_20d=exp_data['dm_comparisons_20d'],
-            bootstrap_cis=exp_data['bootstrap_cis'],
-            hypothesis_tests=[HypothesisTestResult(**h) for h in exp_data['hypothesis_tests']],
-            regime_analysis=exp_data['regime_analysis'],
-            predictions_path=exp_data['predictions_path'],
-            status=exp_data['status'],
-            error=exp_data['error'],
+            experiment_id=exp_data["experiment_id"],
+            created_at=exp_data["created_at"],
+            symbol=exp_data["symbol"],
+            config=exp_data["config"],
+            data_hash=exp_data["data_hash"],
+            seed=exp_data["seed"],
+            models=[ModelResult(**m) for m in exp_data["models"]],
+            dm_comparisons_5d=exp_data["dm_comparisons_5d"],
+            dm_comparisons_20d=exp_data["dm_comparisons_20d"],
+            bootstrap_cis=exp_data["bootstrap_cis"],
+            hypothesis_tests=[HypothesisTestResult(**h) for h in exp_data["hypothesis_tests"]],
+            regime_analysis=exp_data["regime_analysis"],
+            predictions_path=exp_data["predictions_path"],
+            status=exp_data["status"],
+            error=exp_data["error"],
         )
-        
+
         # Persist to disk
         exp_dir = self.base_dir / experiment_id
         exp_dir.mkdir(exist_ok=True)
-        
-        with open(exp_dir / 'result.json', 'w') as f:
+
+        with open(exp_dir / "result.json", "w") as f:
             json.dump(asdict(result), f, indent=2, default=str)
-        
+
         # Clean up active experiment
         del self._active_experiments[experiment_id]
-        
+
         return result
-    
+
     def get_experiment(self, experiment_id: str) -> ExperimentResult | None:
         """Load experiment from disk."""
         exp_dir = self.base_dir / experiment_id
-        result_path = exp_dir / 'result.json'
-        
+        result_path = exp_dir / "result.json"
+
         if not result_path.exists():
             return None
-        
+
         with open(result_path) as f:
             data = json.load(f)
-        
+
         return ExperimentResult(
-            experiment_id=data['experiment_id'],
-            created_at=data['created_at'],
-            symbol=data['symbol'],
-            config=data['config'],
-            data_hash=data['data_hash'],
-            seed=data['seed'],
-            models=[ModelResult(**m) for m in data['models']],
-            dm_comparisons_5d=data['dm_comparisons_5d'],
-            dm_comparisons_20d=data['dm_comparisons_20d'],
-            bootstrap_cis=data['bootstrap_cis'],
-            hypothesis_tests=[HypothesisTestResult(**h) for h in data['hypothesis_tests']],
-            regime_analysis=data.get('regime_analysis'),
-            predictions_path=data.get('predictions_path'),
-            status=data['status'],
-            error=data.get('error'),
+            experiment_id=data["experiment_id"],
+            created_at=data["created_at"],
+            symbol=data["symbol"],
+            config=data["config"],
+            data_hash=data["data_hash"],
+            seed=data["seed"],
+            models=[ModelResult(**m) for m in data["models"]],
+            dm_comparisons_5d=data["dm_comparisons_5d"],
+            dm_comparisons_20d=data["dm_comparisons_20d"],
+            bootstrap_cis=data["bootstrap_cis"],
+            hypothesis_tests=[HypothesisTestResult(**h) for h in data["hypothesis_tests"]],
+            regime_analysis=data.get("regime_analysis"),
+            predictions_path=data.get("predictions_path"),
+            status=data["status"],
+            error=data.get("error"),
         )
-    
+
     def list_experiments(
         self,
         symbol: str | None = None,
@@ -323,32 +327,34 @@ class ExperimentTracker:
     ) -> list[dict]:
         """List all experiments."""
         experiments = []
-        
+
         for exp_dir in self.base_dir.iterdir():
             if not exp_dir.is_dir():
                 continue
-            
-            result_path = exp_dir / 'result.json'
+
+            result_path = exp_dir / "result.json"
             if not result_path.exists():
                 continue
-            
+
             with open(result_path) as f:
                 data = json.load(f)
-            
-            if symbol and data['symbol'] != symbol:
+
+            if symbol and data["symbol"] != symbol:
                 continue
-            if status and data['status'] != status:
+            if status and data["status"] != status:
                 continue
-            
-            experiments.append({
-                'experiment_id': data['experiment_id'],
-                'symbol': data['symbol'],
-                'created_at': data['created_at'],
-                'status': data['status'],
-                'n_models': len(data['models']),
-            })
-        
+
+            experiments.append(
+                {
+                    "experiment_id": data["experiment_id"],
+                    "symbol": data["symbol"],
+                    "created_at": data["created_at"],
+                    "status": data["status"],
+                    "n_models": len(data["models"]),
+                }
+            )
+
         # Sort by creation time (newest first)
-        experiments.sort(key=lambda x: x['created_at'], reverse=True)
-        
+        experiments.sort(key=lambda x: x["created_at"], reverse=True)
+
         return experiments

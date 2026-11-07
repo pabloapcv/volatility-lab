@@ -130,6 +130,10 @@ ignore = [
 [tool.ruff.lint.isort]
 known-first-party = ["volatilitylab"]
 
+[tool.ruff.lint.per-file-ignores]
+# Tests pin np.random.seed for reproducibility; switching to Generator would change draws.
+"tests/**" = ["NPY002"]
+
 [tool.mypy]
 python_version = "3.12"
 strict = true

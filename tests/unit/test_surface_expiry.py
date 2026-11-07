@@ -1,7 +1,7 @@
 """Surface expiry coordinates must be calendar days, not years."""
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 from volatilitylab.pricing.black_scholes import OptionType, black_scholes_price
 from volatilitylab.volatility.surface import VolatilitySurface
@@ -11,18 +11,23 @@ def _tiny_chain():
     rows = []
     spot = 100.0
     vol = 0.20
-    for tte_years, strike in [(7 / 365, 100.0), (21 / 365, 100.0), (42 / 365, 105.0), (42 / 365, 95.0)]:
-        mid = float(black_scholes_price(
-            spot, strike, tte_years, 0.05, vol, OptionType.CALL, 0.0
-        ))
-        rows.append({
-            "strike": strike,
-            "option_type": "call",
-            "time_to_expiry": tte_years,
-            "mid_price": mid,
-            "bid": mid * 0.98,
-            "ask": mid * 1.02,
-        })
+    for tte_years, strike in [
+        (7 / 365, 100.0),
+        (21 / 365, 100.0),
+        (42 / 365, 105.0),
+        (42 / 365, 95.0),
+    ]:
+        mid = float(black_scholes_price(spot, strike, tte_years, 0.05, vol, OptionType.CALL, 0.0))
+        rows.append(
+            {
+                "strike": strike,
+                "option_type": "call",
+                "time_to_expiry": tte_years,
+                "mid_price": mid,
+                "bid": mid * 0.98,
+                "ask": mid * 1.02,
+            }
+        )
     return pd.DataFrame(rows), spot
 
 
