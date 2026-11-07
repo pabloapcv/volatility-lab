@@ -12,12 +12,20 @@ An open-source research platform combining numerical derivatives pricing, stocha
 
 ---
 
+## Screenshots
+
+| Pricing Workbench | Volatility Surface |
+|-------------------|-------------------|
+| ![Pricing Workbench](docs/screenshots/pricing_workbench.png) | ![Volatility Surface](docs/screenshots/volatility_surface_spy.png) |
+
+---
+
 ## Quick Demo
 
 ```bash
 # Clone and set up
-git clone https://github.com/your-repo/volatilitylab.git
-cd volatilitylab
+git clone https://github.com/pabloapcv/volatility-lab.git
+cd volatility-lab
 
 # Install Python dependencies
 pip install -e ".[dev]"
@@ -58,10 +66,16 @@ This platform enables investigation of questions like:
 
 ## Volatility Forecasting Results (FR-07)
 
+**Data Source:**
+- **Price data:** yfinance (SPY, QQQ, NVDA), 2018-01-02 to 2026-11-06
+- **Test period:** 252 trading days (Oct 2025 – Oct 2026)
+- **Training:** Expanding window, 1884 samples at test time
+
+*Note: The bundled sample option chain snapshots in `data/snapshots/` are synthetic (for offline demo only). The forecasting results below use real historical prices from yfinance.*
+
 **Methodology:**
-- Walk-forward validation: 2-year initial training, 1-year held-out test
+- Walk-forward validation: 2-year initial training, 1-year held-out final test
 - Purge gap: max(5, horizon+1) days; embargo: 20 days
-- Data source: yfinance (real market data, 2018-2026)
 - Bootstrap CIs: stationary block bootstrap (n=500)
 - Statistical tests: Diebold-Mariano with HAC variance, HLN correction, Holm-Bonferroni
 
@@ -69,12 +83,12 @@ This platform enables investigation of questions like:
 
 | Symbol | Horizon | HV | EWMA | GARCH | HAR-RV | XGBoost |
 |--------|---------|-----|------|-------|--------|---------|
-| SPY | 5d | -2.10 [-2.72,-1.21] | -2.57 [-3.05,-1.89] | -3.00 [-3.31,-2.57] | -2.38 [-2.45,-2.28] | **-3.13** [-3.34,-2.90] |
-| SPY | 20d | -2.81 [-3.12,-2.44] | -2.93 [-3.20,-2.61] | **-3.11** [-3.26,-2.92] | -2.54 [-2.60,-2.47] | -3.05 [-3.22,-2.87] |
-| QQQ | 5d | 0.83 [-0.37,2.36] | -0.70 [-1.51,0.32] | -1.59 [-2.13,-0.91] | -1.95 [-2.07,-1.81] | **-2.28** [-2.50,-2.04] |
-| QQQ | 20d | -1.38 [-1.87,-0.79] | -1.51 [-1.97,-0.97] | -2.10 [-2.36,-1.78] | -2.02 [-2.12,-1.90] | **-2.19** [-2.38,-1.98] |
-| NVDA | 5d | -0.93 [-1.13,-0.71] | -0.90 [-1.12,-0.66] | **-0.96** [-1.10,-0.82] | -0.82 [-0.93,-0.71] | -0.82 [-0.98,-0.66] |
-| NVDA | 20d | -0.41 [-0.67,-0.15] | -0.63 [-0.85,-0.41] | **-0.94** [-1.03,-0.86] | -0.82 [-0.88,-0.76] | -0.80 [-0.89,-0.71] |
+| SPY | 5d | -2.10 [-2.72,-1.21] | -2.57 [-3.05,-1.89] | -3.00 [-3.31,-2.57] | -3.04 [-3.19,-2.84] | **-3.13** [-3.34,-2.90] |
+| SPY | 20d | -2.81 [-3.12,-2.44] | -2.93 [-3.20,-2.61] | **-3.11** [-3.26,-2.92] | -2.93 [-3.02,-2.83] | -3.05 [-3.22,-2.87] |
+| QQQ | 5d | 0.83 [-0.37,2.36] | -0.70 [-1.51,0.32] | -1.59 [-2.13,-0.91] | -2.24 [-2.44,-2.01] | **-2.28** [-2.50,-2.04] |
+| QQQ | 20d | -1.38 [-1.87,-0.79] | -1.51 [-1.97,-0.97] | -2.10 [-2.36,-1.78] | -2.18 [-2.32,-2.02] | **-2.19** [-2.38,-1.97] |
+| NVDA | 5d | -0.93 [-1.13,-0.71] | -0.90 [-1.12,-0.66] | **-0.96** [-1.10,-0.82] | -0.88 [-0.99,-0.76] | -0.82 [-0.98,-0.66] |
+| NVDA | 20d | -0.41 [-0.67,-0.15] | -0.63 [-0.85,-0.41] | **-0.94** [-1.03,-0.86] | -0.85 [-0.92,-0.79] | -0.80 [-0.90,-0.71] |
 
 ### Hypothesis Test Results
 
@@ -82,20 +96,30 @@ This platform enables investigation of questions like:
 
 | Symbol | Horizon | DM stat | p-value | Significant |
 |--------|---------|---------|---------|-------------|
-| SPY | 5d | -9.70 | <0.0001 | ✓ |
-| SPY | 20d | -6.38 | <0.0001 | ✓ |
-| QQQ | 5d | -5.70 | <0.0001 | ✓ |
-| QQQ | 20d | -2.23 | 0.026 | ✗ (not sig. after Holm) |
-| NVDA | 5d | 0.17 | 0.87 | ✗ |
-| NVDA | 20d | 0.54 | 0.59 | ✗ |
+| SPY | 5d | -2.16 | 0.031 | ✗ |
+| SPY | 20d | -2.15 | 0.032 | ✗ |
+| QQQ | 5d | -0.84 | 0.40 | ✗ |
+| QQQ | 20d | -0.10 | 0.92 | ✗ |
+| NVDA | 5d | 1.87 | 0.062 | ✗ |
+| NVDA | 20d | 1.66 | 0.097 | ✗ |
 
-**H1 Summary:** XGBoost significantly beats HAR-RV for SPY (both horizons) and QQQ 5d.
-No significant improvement for QQQ 20d or NVDA. **Partially supported.**
+**H1 Summary:** XGBoost does **not** significantly outperform HAR-RV after Holm correction. 
+GARCH(1,1) is the best model for SPY 20d, NVDA 5d, and NVDA 20d. **H1 not supported.**
 
-**Leakage Check (Shuffle Test):** Edge disappears on shuffled targets (5/6 cases),
-confirming results are not due to data leakage.
+**Leakage Check (Shuffle Test):**
 
-*Models: HV (21d), EWMA (λ=0.94), GARCH(1,1), HAR-RV, XGBoost (100 trees, depth 4).*
+| Symbol | Horizon | Real QLIKE | Shuffled QLIKE | Edge Preserved |
+|--------|---------|------------|----------------|----------------|
+| SPY | 5d | -3.13 | -2.83 | ✓ |
+| SPY | 20d | -3.05 | -2.84 | ✓ |
+| QQQ | 5d | -2.28 | -2.12 | ✓ |
+| QQQ | 20d | -2.19 | -2.14 | ✓ |
+| NVDA | 5d | -0.82 | -0.79 | ✓ |
+| NVDA | 20d | -0.80 | -0.82 | ✗ |
+
+NVDA 20d fails the shuffle test (edge not preserved), indicating XGBoost's apparent performance on this case is likely noise. Across 10 random seeds, edge is preserved 7/10 times—the signal is weak and not robust.
+
+*Models: HV (21d), EWMA (λ=0.94), GARCH(1,1), HAR-RV (daily/weekly/monthly RV), XGBoost (100 trees, depth 4).*
 *Reproduce: `python scripts/run_experiments.py`*
 
 ---
@@ -298,7 +322,8 @@ volatilitylab/
 
 - **European Monte Carlo only**: American options require LSM or similar
 - **No stochastic vol**: Heston model is out of scope for MVP
-- **Synthetic sample data**: Real data requires API access or yfinance
+- **ML forecasting gains are modest**: XGBoost does not significantly beat HAR-RV or GARCH in rigorous testing
+- **Bundled option chain snapshots are synthetic**: For offline UI demo only; real options data requires yfinance or API access
 
 ### Roadmap
 

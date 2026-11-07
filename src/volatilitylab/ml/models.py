@@ -217,6 +217,7 @@ class HARRVModel(VolatilityModel):
         self.coefficients = None
         self.intercept = None
         self._fitted = False
+        self._feature_spec = []  # (column_name, transform_fn)
     
     def fit(self, X: pd.DataFrame, y: pd.Series, **kwargs) -> None:
         """
@@ -225,37 +226,38 @@ class HARRVModel(VolatilityModel):
         Parameters
         ----------
         X : pd.DataFrame
-            Must contain 'rvar_5d' and 'rvar_21d' (or 'rvar_22d')
+            Must contain ret_lag_1, rvar_5d, and rvar_21d
         y : pd.Series
             Target forward RV
         """
         from sklearn.linear_model import LinearRegression
         
-        # Extract HAR components
         features = []
         feature_names = []
+        self._feature_spec = []
         
-        # Daily RV (use 5d / 5 as proxy, or rvar_5d if available)
+        # Daily RV: squared daily return (annualized)
+        # ret_lag_1 is the return from t-1 to t
+        if 'ret_lag_1' in X.columns:
+            daily_rv = (X['ret_lag_1'].values ** 2) * 252
+            features.append(daily_rv)
+            feature_names.append('rv_d')
+            self._feature_spec.append(('ret_lag_1', lambda x: (x ** 2) * 252))
+        
+        # Weekly RV: 5-day realized variance (already annualized in features)
         if 'rvar_5d' in X.columns:
             features.append(X['rvar_5d'].values)
-            feature_names.append('rv_d')
+            feature_names.append('rv_w')
+            self._feature_spec.append(('rvar_5d', lambda x: x))
         
-        # Weekly RV (5d)
-        for col in ['rvar_5d', 'rv_5d']:
-            if col in X.columns:
-                features.append(X[col].values if col.startswith('rvar') else X[col].values**2)
-                feature_names.append('rv_w')
-                break
+        # Monthly RV: 21-day realized variance
+        if 'rvar_21d' in X.columns:
+            features.append(X['rvar_21d'].values)
+            feature_names.append('rv_m')
+            self._feature_spec.append(('rvar_21d', lambda x: x))
         
-        # Monthly RV (21d or 22d)
-        for col in ['rvar_21d', 'rvar_22d', 'rv_21d']:
-            if col in X.columns:
-                features.append(X[col].values if col.startswith('rvar') else X[col].values**2)
-                feature_names.append('rv_m')
-                break
-        
-        if len(features) < 2:
-            raise ValueError("Need at least daily and weekly RV features")
+        if len(features) < 3:
+            raise ValueError(f"HAR-RV needs daily, weekly, monthly RV. Found: {feature_names}")
         
         X_har = np.column_stack(features)
         
@@ -266,9 +268,6 @@ class HARRVModel(VolatilityModel):
         self.coefficients = dict(zip(feature_names, model.coef_))
         self.intercept = model.intercept_
         self._model = model
-        self._feature_cols = [c for c in X.columns if any(
-            f in c for f in ['rvar_5d', 'rvar_21d', 'rvar_22d', 'rv_5d', 'rv_21d']
-        )][:len(features)]
         self._fitted = True
     
     def predict(self, X: pd.DataFrame, horizon: int = None) -> np.ndarray:
@@ -277,8 +276,8 @@ class HARRVModel(VolatilityModel):
             raise ValueError("Model not fitted")
         
         features = []
-        for col in self._feature_cols:
-            features.append(X[col].values)
+        for col_name, transform_fn in self._feature_spec:
+            features.append(transform_fn(X[col_name].values))
         
         X_har = np.column_stack(features)
         return self._model.predict(X_har)
