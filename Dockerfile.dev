@@ -10,8 +10,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy Python requirements
-COPY pyproject.toml .
+# Copy Python requirements (hatchling needs README/LICENSE to build)
+COPY pyproject.toml README.md LICENSE ./
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -e ".[dev]"

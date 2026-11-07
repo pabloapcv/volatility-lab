@@ -11,8 +11,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy Python project files
-COPY pyproject.toml .
+# Copy Python project files (hatchling needs README/LICENSE to build)
+COPY pyproject.toml README.md LICENSE ./
 COPY src/ src/
 COPY backend/ backend/
 COPY data/ data/
