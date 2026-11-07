@@ -3,6 +3,7 @@ import { useQuery, useMutation } from '@tanstack/react-query'
 import Plot from 'react-plotly.js'
 import { volatility, data, SurfaceResponse, SmileResponse, TermStructureResponse } from '../api'
 import { RefreshCw, AlertTriangle, CheckCircle2, Layers } from 'lucide-react'
+import UsageGuide from './UsageGuide'
 
 type ViewMode = 'surface' | 'smile' | 'term'
 
@@ -180,6 +181,17 @@ export default function VolatilitySurfaceLab() {
 
   return (
     <div className="space-y-6">
+      <UsageGuide
+        storageKey="surface"
+        items={[
+          'An implied-vol surface is the market’s σ for every strike and expiry, solved from option quotes.',
+          'Underlying is SPY, QQQ, or NVDA. The default data is the committed yfinance chain observed 2026-11-07 (nearby expiries, near-ATM strikes). Load Chain fetches a fresh chain if the API can reach Yahoo.',
+          'View switches 3D Surface, Smile, or Term Structure. Smile also has an Expiry (days) input.',
+          'On the 3D plot: drag to rotate, scroll to zoom. Axes are log moneyness ln(K/F), days to expiry, and implied vol. Red dots are observed quotes; the mesh is RBF interpolation.',
+          'Smile is IV vs log-moneyness at one expiry — typically a U-shape, often with equity put skew (OTM puts richer than calls). Term Structure is ATM IV across expiries.',
+          'Very short-dated quotes from a weekend snapshot can show inflated IV — treat the front of the surface with caution.',
+        ]}
+      />
       {/* Controls */}
       <div className="card">
         <div className="flex items-center justify-between">

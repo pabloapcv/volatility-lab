@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { pricing, BlackScholesRequest, BlackScholesResponse, BinomialResponse, MonteCarloResponse } from '../api'
 import { Calculator, AlertCircle, CheckCircle, TrendingUp, TrendingDown } from 'lucide-react'
+import UsageGuide from './UsageGuide'
 
 interface PricingInputs {
   spot: number
@@ -82,7 +83,20 @@ export default function PricingWorkbench() {
     value !== undefined ? value.toFixed(4) : '-'
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div className="space-y-6">
+      <UsageGuide
+        storageKey="pricing"
+        items={[
+          'Spot and strike are in dollars. Time to expiry is in years (0.25 ≈ three months). Volatility is annualized σ (0.22 = 22%). Risk-free rate and dividend yield are continuous decimals.',
+          'Call vs Put sets the payoff. Click Calculate All Models to price with Black-Scholes, CRR Binomial, and Monte Carlo together.',
+          'Black-Scholes is the closed-form European price. CRR Binomial is a recombining tree (European on this page). Monte Carlo simulates GBM paths (fixed seed 42).',
+          'Binomial Steps and MC Paths only affect those two models — Black-Scholes ignores them.',
+          'Greeks: Delta and Gamma are per $1 move in the underlying. Theta is daily time decay. Vega and Rho are per 1% change in volatility and in the interest rate.',
+          'Try raising Binomial Steps (for example 100 → 500) and watch the binomial error vs Black-Scholes shrink.',
+          'Monte Carlo shows a 95% confidence interval under the price — Black-Scholes should usually sit inside it.',
+        ]}
+      />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       {/* Input Panel */}
       <div className="card">
         <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
@@ -396,6 +410,7 @@ export default function PricingWorkbench() {
             </div>
           </div>
         )}
+      </div>
       </div>
     </div>
   )

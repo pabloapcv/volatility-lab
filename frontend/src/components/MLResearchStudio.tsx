@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import Plot from 'react-plotly.js';
+import UsageGuide from './UsageGuide';
 
 interface MetricsRow {
   model: string;
@@ -170,6 +171,18 @@ export function MLResearchStudio() {
 
   return (
     <div className="space-y-6">
+      <UsageGuide
+        storageKey="ml"
+        items={[
+          'The FR-07 committed results table is preloaded. Symbol, Start Date, and Random Seed plus Run Experiment start a new walk-forward job (slow on a small host). Refresh List reloads past runs.',
+          'HV is trailing historical vol. EWMA is RiskMetrics-style decay (λ=0.94). GARCH(1,1) is conditional variance. HAR-RV uses daily/weekly/monthly realized-vol lags. XGBoost is gradient-boosted trees on those features.',
+          'QLIKE is the scoring rule — lower is better. Bold blue in the table is the best model on that row.',
+          'Bracketed numbers are 95% bootstrap confidence intervals. Overlapping CIs mean the ranking is noisy.',
+          'DM is Diebold-Mariano of XGBoost vs HAR-RV. Holm is a multiple-testing correction — ✓ means still significant after Holm.',
+          'The shuffle test permutes targets; if shuffled QLIKE beats the real fit, treat that row as leakage/noise (NVDA 20d).',
+          'Headline: H1 (XGBoost beats HAR-RV) is NOT SUPPORTED after Holm correction.',
+        ]}
+      />
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
           ML Research Studio
