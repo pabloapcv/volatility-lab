@@ -18,9 +18,9 @@ from fastapi.responses import JSONResponse
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
 from backend.app.api.data import router as data_router
+from backend.app.api.experiments import router as experiments_router
 from backend.app.api.pricing import router as pricing_router
 from backend.app.api.volatility import router as volatility_router
-from backend.app.api.experiments import router as experiments_router
 
 
 @asynccontextmanager
@@ -60,18 +60,29 @@ Quantitative Options Pricing, Volatility Forecasting & Risk Analytics API.
     lifespan=lifespan,
 )
 
-# CORS middleware for frontend
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
+def _cors_origins() -> list[str]:
+    """Localhost defaults plus comma-separated CORS_ORIGINS (hosted frontends)."""
+    origins = [
         "http://localhost:5173",
         "http://localhost:5174",
         "http://localhost:5175",
         "http://127.0.0.1:5173",
         "http://127.0.0.1:5174",
         "http://127.0.0.1:5175",
-        "*",  # Allow all in development
-    ],
+    ]
+    extra = os.environ.get("CORS_ORIGINS", "")
+    for origin in extra.split(","):
+        origin = origin.strip().rstrip("/")
+        if origin and origin not in origins:
+            origins.append(origin)
+    return origins
+
+
+# CORS middleware for frontend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_cors_origins(),
+    allow_origin_regex=r"https://.*\.onrender\.com",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -122,10 +133,10 @@ async def global_exception_handler(request, exc):
 
 if __name__ == "__main__":
     import uvicorn
-    
-    port = int(os.environ.get("API_PORT", 8000))
+
+    port = int(os.environ.get("PORT") or os.environ.get("API_PORT", "8000"))
     host = os.environ.get("API_HOST", "0.0.0.0")
-    
+
     uvicorn.run(
         "backend.app.main:app",
         host=host,

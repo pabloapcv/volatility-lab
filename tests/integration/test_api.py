@@ -38,6 +38,19 @@ class TestHealthEndpoints:
         assert response.status_code == 200
         assert response.json()["status"] == "healthy"
 
+    def test_cors_localhost_origin(self, client):
+        """Local Vite origins remain allowed."""
+        response = client.get("/health", headers={"Origin": "http://localhost:5175"})
+        assert response.status_code == 200
+        assert response.headers.get("access-control-allow-origin") == "http://localhost:5175"
+
+    def test_cors_onrender_origin(self, client):
+        """Render static-site origins match allow_origin_regex."""
+        origin = "https://volatilitylab-ui.onrender.com"
+        response = client.get("/health", headers={"Origin": origin})
+        assert response.status_code == 200
+        assert response.headers.get("access-control-allow-origin") == origin
+
 
 class TestPricingEndpoints:
     """Test pricing API endpoints."""

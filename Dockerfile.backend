@@ -22,7 +22,9 @@ COPY data/ data/
 ENV PYTHONPATH=/app/src:/app
 ENV API_HOST=0.0.0.0
 ENV API_PORT=8000
+ENV PORT=8000
 
 EXPOSE 8000
 
-CMD ["uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Shell form so Render can inject PORT (default 8000 locally).
+CMD uvicorn backend.app.main:app --host 0.0.0.0 --port ${PORT:-8000}
