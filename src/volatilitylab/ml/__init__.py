@@ -5,6 +5,7 @@ from volatilitylab.ml.models import (
     HistoricalVolModel,
     EWMAModel,
     GARCHModel,
+    HARRVModel,
     XGBoostVolModel,
 )
 from volatilitylab.ml.validation import WalkForwardValidator, ValidationConfig

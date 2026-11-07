@@ -200,6 +200,97 @@ class GARCHModel(VolatilityModel):
         }
 
 
+class HARRVModel(VolatilityModel):
+    """
+    Heterogeneous Autoregressive model for Realized Volatility (HAR-RV).
+    
+    Standard benchmark in volatility forecasting literature.
+    Uses daily, weekly (5d), and monthly (22d) RV components:
+    
+    RV_{t+h} = β₀ + β_d * RV_d + β_w * RV_w + β_m * RV_m + ε
+    
+    Reference: Corsi (2009) "A Simple Approximate Long-Memory Model 
+               of Realized Volatility"
+    """
+    
+    def __init__(self):
+        self.coefficients = None
+        self.intercept = None
+        self._fitted = False
+    
+    def fit(self, X: pd.DataFrame, y: pd.Series, **kwargs) -> None:
+        """
+        Fit HAR-RV model using OLS.
+        
+        Parameters
+        ----------
+        X : pd.DataFrame
+            Must contain 'rvar_5d' and 'rvar_21d' (or 'rvar_22d')
+        y : pd.Series
+            Target forward RV
+        """
+        from sklearn.linear_model import LinearRegression
+        
+        # Extract HAR components
+        features = []
+        feature_names = []
+        
+        # Daily RV (use 5d / 5 as proxy, or rvar_5d if available)
+        if 'rvar_5d' in X.columns:
+            features.append(X['rvar_5d'].values)
+            feature_names.append('rv_d')
+        
+        # Weekly RV (5d)
+        for col in ['rvar_5d', 'rv_5d']:
+            if col in X.columns:
+                features.append(X[col].values if col.startswith('rvar') else X[col].values**2)
+                feature_names.append('rv_w')
+                break
+        
+        # Monthly RV (21d or 22d)
+        for col in ['rvar_21d', 'rvar_22d', 'rv_21d']:
+            if col in X.columns:
+                features.append(X[col].values if col.startswith('rvar') else X[col].values**2)
+                feature_names.append('rv_m')
+                break
+        
+        if len(features) < 2:
+            raise ValueError("Need at least daily and weekly RV features")
+        
+        X_har = np.column_stack(features)
+        
+        # Fit OLS
+        model = LinearRegression()
+        model.fit(X_har, y)
+        
+        self.coefficients = dict(zip(feature_names, model.coef_))
+        self.intercept = model.intercept_
+        self._model = model
+        self._feature_cols = [c for c in X.columns if any(
+            f in c for f in ['rvar_5d', 'rvar_21d', 'rvar_22d', 'rv_5d', 'rv_21d']
+        )][:len(features)]
+        self._fitted = True
+    
+    def predict(self, X: pd.DataFrame, horizon: int = None) -> np.ndarray:
+        """Predict forward RV using HAR model."""
+        if not self._fitted:
+            raise ValueError("Model not fitted")
+        
+        features = []
+        for col in self._feature_cols:
+            features.append(X[col].values)
+        
+        X_har = np.column_stack(features)
+        return self._model.predict(X_har)
+    
+    def get_params(self) -> dict:
+        return {
+            'intercept': self.intercept,
+            'coefficients': self.coefficients,
+            'fitted': self._fitted,
+        }
+
+
 class XGBoostVolModel(VolatilityModel):
     """
     XGBoost regression model for volatility forecasting.
@@ -338,6 +429,7 @@ def create_model(
         'hv': HistoricalVolModel,
         'ewma': EWMAModel,
         'garch': GARCHModel,
+        'har': HARRVModel,
         'xgboost': XGBoostVolModel,
     }
     

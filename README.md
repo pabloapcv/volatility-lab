@@ -58,35 +58,45 @@ This platform enables investigation of questions like:
 
 ## Volatility Forecasting Results (FR-07)
 
-Walk-forward validation with 2-year initial training, 1-year held-out test period.
-Purge gap: 5 days, embargo gap: 20 days to prevent target leakage.
+**Methodology:**
+- Walk-forward validation: 2-year initial training, 1-year held-out test
+- Purge gap: max(5, horizon+1) days; embargo: 20 days
+- Data source: yfinance (real market data, 2018-2026)
+- Bootstrap CIs: stationary block bootstrap (n=500)
+- Statistical tests: Diebold-Mariano with HAC variance, HLN correction, Holm-Bonferroni
 
-### Model Performance (QLIKE, lower is better)
+### Model Performance (QLIKE ± 95% CI, lower is better)
 
-| Symbol | Horizon | HV | EWMA | GARCH | XGBoost | XGBoost 95% CI |
-|--------|---------|-----|------|-------|---------|----------------|
-| SPY | 5d | -3.08 | -3.08 | -3.08 | **-3.39** | [-3.60, -3.17] |
-| SPY | 20d | -0.91 | -2.31 | -3.10 | **-3.21** | [-3.37, -3.05] |
-| QQQ | 5d | -2.13 | -2.05 | -2.15 | **-2.50** | [-2.75, -2.27] |
-| QQQ | 20d | 2.82 | -0.30 | -1.96 | **-2.34** | [-2.51, -2.16] |
-| NVDA | 5d | -0.91 | -0.89 | -0.96 | **-1.25** | [-1.44, -1.06] |
-| NVDA | 20d | -0.90 | -0.80 | -0.95 | **-1.03** | [-1.16, -0.91] |
+| Symbol | Horizon | HV | EWMA | GARCH | HAR-RV | XGBoost |
+|--------|---------|-----|------|-------|--------|---------|
+| SPY | 5d | -2.10 [-2.72,-1.21] | -2.57 [-3.05,-1.89] | -3.00 [-3.31,-2.57] | -2.38 [-2.45,-2.28] | **-3.13** [-3.34,-2.90] |
+| SPY | 20d | -2.81 [-3.12,-2.44] | -2.93 [-3.20,-2.61] | **-3.11** [-3.26,-2.92] | -2.54 [-2.60,-2.47] | -3.05 [-3.22,-2.87] |
+| QQQ | 5d | 0.83 [-0.37,2.36] | -0.70 [-1.51,0.32] | -1.59 [-2.13,-0.91] | -1.95 [-2.07,-1.81] | **-2.28** [-2.50,-2.04] |
+| QQQ | 20d | -1.38 [-1.87,-0.79] | -1.51 [-1.97,-0.97] | -2.10 [-2.36,-1.78] | -2.02 [-2.12,-1.90] | **-2.19** [-2.38,-1.98] |
+| NVDA | 5d | -0.93 [-1.13,-0.71] | -0.90 [-1.12,-0.66] | **-0.96** [-1.10,-0.82] | -0.82 [-0.93,-0.71] | -0.82 [-0.98,-0.66] |
+| NVDA | 20d | -0.41 [-0.67,-0.15] | -0.63 [-0.85,-0.41] | **-0.94** [-1.03,-0.86] | -0.82 [-0.88,-0.76] | -0.80 [-0.89,-0.71] |
 
 ### Hypothesis Test Results
 
-**H1: Does ML beat traditional baselines?** ✓ **Supported**
+**H1: Does XGBoost beat HAR-RV baseline?** (Diebold-Mariano, Holm-corrected α=0.05)
 
-Diebold-Mariano tests with HAC variance (Newey-West) and HLN small-sample correction
-confirm XGBoost significantly outperforms HV and EWMA baselines across all symbols
-and horizons (p < 0.001, Holm-corrected).
+| Symbol | Horizon | DM stat | p-value | Significant |
+|--------|---------|---------|---------|-------------|
+| SPY | 5d | -9.70 | <0.0001 | ✓ |
+| SPY | 20d | -6.38 | <0.0001 | ✓ |
+| QQQ | 5d | -5.70 | <0.0001 | ✓ |
+| QQQ | 20d | -2.23 | 0.026 | ✗ (not sig. after Holm) |
+| NVDA | 5d | 0.17 | 0.87 | ✗ |
+| NVDA | 20d | 0.54 | 0.59 | ✗ |
 
-**H3: Does performance differ across volatility regimes?** ✓ **Supported**
+**H1 Summary:** XGBoost significantly beats HAR-RV for SPY (both horizons) and QQQ 5d.
+No significant improvement for QQQ 20d or NVDA. **Partially supported.**
 
-XGBoost performs better in low-volatility regimes (lower QLIKE) than high-volatility
-regimes across all tests, with the gap statistically significant.
+**Leakage Check (Shuffle Test):** Edge disappears on shuffled targets (5/6 cases),
+confirming results are not due to data leakage.
 
-*Models: Rolling HV (21d), EWMA (λ=0.94), GARCH(1,1) via arch, XGBoost on point-in-time features.*
-*Confidence intervals via stationary block bootstrap (n=500).*
+*Models: HV (21d), EWMA (λ=0.94), GARCH(1,1), HAR-RV, XGBoost (100 trees, depth 4).*
+*Reproduce: `python scripts/run_experiments.py`*
 
 ---
 

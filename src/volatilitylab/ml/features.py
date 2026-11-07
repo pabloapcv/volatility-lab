@@ -236,15 +236,17 @@ class FeatureEngine:
         returns: pd.Series,
         horizon: int,
     ) -> pd.Series:
-        """Compute forward-looking realized variance (target)."""
-        # Shift returns backward to get future values
-        # sum of squared returns over next `horizon` days, annualized
-        forward_sq_ret = returns.shift(-horizon).rolling(window=horizon).apply(
-            lambda x: (x ** 2).sum() * 252 / horizon,
-            raw=True
-        )
-        # Shift back to align with prediction time
-        return forward_sq_ret.shift(horizon)
+        """
+        Compute forward-looking realized variance (target).
+        
+        At time t, target = annualized variance of returns from t+1 to t+horizon.
+        """
+        squared_returns = returns ** 2
+        # Rolling sum gives sum of r²_{t-h+1} to r²_t at position t
+        # Shift by -horizon to get sum of r²_{t+1} to r²_{t+h} at position t
+        forward_rv = squared_returns.rolling(window=horizon).sum().shift(-horizon)
+        # Annualize
+        return forward_rv * 252 / horizon
 
 
 def load_price_data(
