@@ -5,12 +5,12 @@ build-backend = "hatchling.build"
 [project]
 name = "volatilitylab"
 version = "0.1.0"
-description = "Quantitative Options Pricing, Volatility Forecasting & Risk Analytics"
+description = "Options pricing, implied volatility, and realized-vol forecasting"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.12"
 authors = [
-    { name = "VolatilityLab Contributors" }
+    { name = "Pablo Pena", email = "pabloapcv@gmail.com" }
 ]
 keywords = [
     "options",
