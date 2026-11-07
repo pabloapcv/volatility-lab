@@ -1,8 +1,10 @@
-# Python
+# Python bytecode
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
+
+# Python build/dist
 .Python
 build/
 develop-eggs/
@@ -19,44 +21,86 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+MANIFEST
 
 # Virtual environments
 venv/
 ENV/
 env/
 .venv/
+.env
 
-# IDE
+# IDE and editors
 .idea/
 .vscode/
 *.swp
 *.swo
 *~
+.project
+.pydevproject
+.settings/
+*.sublime-workspace
+*.sublime-project
 
-# Node
+# Node.js
 node_modules/
-npm-debug.log
-yarn-error.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn-integrity
 
-# Build artifacts
-*.log
-.cache/
+# Vite
+.vite/
+dist/
 
-# Test/coverage
+# Test and coverage
 .coverage
+.coverage.*
 htmlcov/
+.tox/
+.nox/
 .pytest_cache/
 .mypy_cache/
+.ruff_cache/
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
 
-# OS
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# OS files
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
 
 # Local config
-.env
-.env.local
 *.local
+.env.local
+.env.*.local
 
-# Data (keep sample snapshots)
+# Logs
+*.log
+logs/
+
+# Data caches (keep sample snapshots)
 data/snapshots/cache/
-!data/snapshots/*_sample_offline_*
+
+# Experiments (generated, can be reproduced)
+experiments/
+
+# Uploads
+uploads/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
