@@ -2,7 +2,18 @@
 
 **Quantitative Options Pricing, Volatility Forecasting & Risk Analytics**
 
-An open-source research platform combining numerical derivatives pricing, stochastic simulation, machine learning, and empirical hedging analysis.
+## Live demo
+
+No install needed:
+
+- **App:** [https://volatilitylab-hd1l.onrender.com](https://volatilitylab-hd1l.onrender.com)
+- **API:** [https://volatilitylab-api.onrender.com](https://volatilitylab-api.onrender.com) ([OpenAPI docs](https://volatilitylab-api.onrender.com/docs))
+
+The free Render host sleeps when idle. The first load after a pause can take **~30–60 seconds**; later clicks are fast (implied-vol surfaces are cached in memory on the API).
+
+---
+
+An open-source research platform combining numerical derivatives pricing, stochastic simulation, machine learning, and empirical hedging analysis. The UI is a light-themed three-tab app; each tab has a collapsible **How to use this page** guide (open on first visit).
 
 ![Python](https://img.shields.io/badge/Python-3.12+-blue)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.109+-green)
@@ -12,35 +23,25 @@ An open-source research platform combining numerical derivatives pricing, stocha
 
 ---
 
+## How to use it
+
+Open the live app (or a local `make demo` session) and pick a tab. Expand **How to use this page** if it is collapsed.
+
+1. **Options Pricing Workbench** — Set spot, strike, expiry in **years**, volatility, rate, dividend yield, and call/put. **Calculate All Models** prices with Black-Scholes, CRR binomial, and Monte Carlo. Vega and Rho are per **1%** change. Raise **Binomial Steps** to watch the tree converge to Black-Scholes; the Monte Carlo card shows a 95% CI.
+
+2. **Volatility Surface Lab** — Pick SPY, QQQ, or NVDA. The default data is a committed **yfinance** chain observed **2026-11-07**. Switch 3D Surface / Smile / Term Structure. Drag to rotate the 3D plot, scroll to zoom. Axes are log moneyness \(\ln(K/F)\), days to expiry, and implied vol. Very short-dated quotes from a weekend snapshot can show inflated IV.
+
+3. **ML Research Studio** — The preloaded **FR-07** table is the committed result (walk-forward QLIKE ± 95% CI). Lower QLIKE is better; bold blue is best on that row. **DM** is Diebold-Mariano of XGBoost vs HAR-RV; **Holm** is the multiple-testing correction. The shuffle test flags leakage (NVDA 20d).
+
+**Honest H1 result:** *“XGBoost significantly beats HAR-RV”* is **NOT SUPPORTED** after Holm correction. GARCH(1,1) is best on several rows. See the tables below for the numbers.
+
+---
+
 ## Screenshots
 
 | Pricing Workbench | Volatility Surface | ML Research Studio |
 |-------------------|--------------------|--------------------|
 | ![Pricing Workbench](docs/screenshots/pricing_workbench.png) | ![Volatility Surface](docs/screenshots/volatility_surface_spy.png) | ![ML Research Studio](docs/screenshots/ml_research_studio.png) |
-
----
-
-## Quick Start
-
-```bash
-git clone https://github.com/pabloapcv/volatility-lab.git
-cd volatility-lab
-make demo
-```
-
-That installs Python + frontend deps and starts both servers. Open
-[http://127.0.0.1:5175](http://127.0.0.1:5175) (API at [http://127.0.0.1:8765](http://127.0.0.1:8765)).
-
-Docker alternative: `docker compose up --build` (same ports).
-
-What you get without running anything else:
-- **Options Pricing Workbench**: Black-Scholes, CRR binomial, and Monte Carlo with matching Greek units
-- **Volatility Surface Lab**: committed **yfinance** SPY/QQQ/NVDA chain from 2026-11-07 (synthetic chain kept as offline fallback)
-- **ML Research Studio**: preloaded FR-07 table (5 models, CIs, DM tests, H1 **not supported**)
-
-```bash
-make test          # pytest
-```
 
 ---
 
@@ -219,17 +220,23 @@ See [docs/mathematical_models.md](docs/mathematical_models.md) for full derivati
 | `/api/v1/experiments` | GET | List experiments |
 | `/api/v1/experiments/{id}` | GET | Get experiment results |
 
-Interactive docs at http://localhost:8000/docs
+Interactive docs at http://127.0.0.1:8765/docs (or `/docs` on the hosted API).
 
 ---
 
-## Running Locally
+## Running locally
+
+Requires **Python 3.12+** and **Node 18+**.
 
 ### One command (recommended)
 
 ```bash
+git clone https://github.com/pabloapcv/volatility-lab.git
+cd volatility-lab
 make demo
 ```
+
+That installs Python + frontend deps and starts both servers.
 
 API: http://127.0.0.1:8765 · UI: http://127.0.0.1:5175
 
