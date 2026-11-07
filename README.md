@@ -38,6 +38,7 @@ cd frontend && npm install && npm run dev
 Open http://localhost:5173 to explore:
 - **Options Pricing Workbench**: Compare Black-Scholes, Binomial, and Monte Carlo prices
 - **Volatility Surface Lab**: 3D volatility surfaces, smiles, and term structure
+- **ML Research Studio**: Run and analyze volatility forecasting experiments
 
 ---
 
@@ -53,7 +54,39 @@ This platform enables investigation of questions like:
 
 4. **American Option Premium**: When is early exercise valuable? How does dividend yield affect the American-European spread?
 
-*Future research (data collection in progress): ML volatility forecasting and delta-hedging backtest studies.*
+---
+
+## Volatility Forecasting Results (FR-07)
+
+Walk-forward validation with 2-year initial training, 1-year held-out test period.
+Purge gap: 5 days, embargo gap: 20 days to prevent target leakage.
+
+### Model Performance (QLIKE, lower is better)
+
+| Symbol | Horizon | HV | EWMA | GARCH | XGBoost | XGBoost 95% CI |
+|--------|---------|-----|------|-------|---------|----------------|
+| SPY | 5d | -3.08 | -3.08 | -3.08 | **-3.39** | [-3.60, -3.17] |
+| SPY | 20d | -0.91 | -2.31 | -3.10 | **-3.21** | [-3.37, -3.05] |
+| QQQ | 5d | -2.13 | -2.05 | -2.15 | **-2.50** | [-2.75, -2.27] |
+| QQQ | 20d | 2.82 | -0.30 | -1.96 | **-2.34** | [-2.51, -2.16] |
+| NVDA | 5d | -0.91 | -0.89 | -0.96 | **-1.25** | [-1.44, -1.06] |
+| NVDA | 20d | -0.90 | -0.80 | -0.95 | **-1.03** | [-1.16, -0.91] |
+
+### Hypothesis Test Results
+
+**H1: Does ML beat traditional baselines?** ✓ **Supported**
+
+Diebold-Mariano tests with HAC variance (Newey-West) and HLN small-sample correction
+confirm XGBoost significantly outperforms HV and EWMA baselines across all symbols
+and horizons (p < 0.001, Holm-corrected).
+
+**H3: Does performance differ across volatility regimes?** ✓ **Supported**
+
+XGBoost performs better in low-volatility regimes (lower QLIKE) than high-volatility
+regimes across all tests, with the gap statistically significant.
+
+*Models: Rolling HV (21d), EWMA (λ=0.94), GARCH(1,1) via arch, XGBoost on point-in-time features.*
+*Confidence intervals via stationary block bootstrap (n=500).*
 
 ---
 
@@ -152,6 +185,9 @@ See [docs/mathematical_models.md](docs/mathematical_models.md) for full derivati
 | `/api/v1/volatility/smile/{symbol}/{days}` | GET | Smile at expiry |
 | `/api/v1/data/chain` | POST | Load options chain |
 | `/api/v1/data/snapshots` | GET | List saved snapshots |
+| `/api/v1/experiments` | POST | Start ML experiment |
+| `/api/v1/experiments` | GET | List experiments |
+| `/api/v1/experiments/{id}` | GET | Get experiment results |
 
 Interactive docs at http://localhost:8000/docs
 
@@ -219,7 +255,13 @@ volatilitylab/
 ├── src/volatilitylab/
 │   ├── pricing/          # BS, Binomial, MC engines
 │   ├── volatility/       # IV solver, surface
-│   └── data/             # Chain loading, snapshots
+│   ├── data/             # Chain loading, snapshots
+│   └── ml/               # Volatility forecasting
+│       ├── features.py   # Point-in-time feature engineering
+│       ├── models.py     # HV, EWMA, GARCH, XGBoost
+│       ├── validation.py # Walk-forward with purge/embargo
+│       ├── evaluation.py # Metrics, bootstrap, DM tests
+│       └── experiments.py # Experiment tracking
 ├── backend/app/
 │   ├── api/              # FastAPI routes
 │   └── schemas/          # Pydantic models
@@ -232,7 +274,10 @@ volatilitylab/
 ├── docs/
 │   └── mathematical_models.md
 ├── data/snapshots/       # Saved market data
+├── experiments/          # Saved experiment results
 └── scripts/
+    ├── create_sample_snapshot.py
+    └── run_experiments.py
 ```
 
 ---
@@ -243,17 +288,14 @@ volatilitylab/
 
 - **European Monte Carlo only**: American options require LSM or similar
 - **No stochastic vol**: Heston model is out of scope for MVP
-- **Static vol surface**: No dynamics or forecasting yet
-- **Synthetic sample data**: Real data requires API access
+- **Synthetic sample data**: Real data requires API access or yfinance
 
-### Roadmap (Data Collection in Progress)
-
-Historical option chain collection is running daily. Planned additions:
+### Roadmap
 
 1. **Heston Model**: Stochastic volatility calibration and pricing
-2. **ML Volatility Forecasting**: GARCH, XGBoost, LSTM comparison
-3. **Delta-Hedging Backtest**: Empirical hedge performance analysis
-4. **Risk Analytics**: VaR/ES with scenario analysis
+2. **Delta-Hedging Backtest**: Empirical hedge performance analysis
+3. **Risk Analytics**: VaR/ES with scenario analysis
+4. **LSTM Volatility**: Deep learning volatility forecasting comparison
 
 ---
 

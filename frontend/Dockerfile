@@ -13,4 +13,5 @@ COPY . .
 
 EXPOSE 5173
 
-CMD ["npm", "run", "dev"]
+# Use 0.0.0.0 to allow external connections
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]

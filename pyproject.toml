@@ -58,9 +58,11 @@ dev = [
 ml = [
     "scikit-learn>=1.4.0",
     "xgboost>=2.0.0",
-    "torch>=2.2.0",
     "statsmodels>=0.14.0",
     "arch>=6.2.0",
+]
+all = [
+    "volatilitylab[dev,ml]",
 ]
 
 [project.urls]

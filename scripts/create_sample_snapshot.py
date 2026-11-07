@@ -7,7 +7,7 @@ structure, allowing tests and demos to run without network access.
 """
 
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import numpy as np
@@ -19,12 +19,13 @@ def generate_sample_chain(
     spot: float = 585.0,
     n_expirations: int = 6,
     strikes_per_expiration: int = 20,
+    seed: int = 42,
 ) -> tuple[pd.DataFrame, dict]:
     """Generate synthetic options chain data."""
     
-    np.random.seed(42)  # Reproducibility
+    np.random.seed(seed)
     
-    observed_at = datetime.utcnow()
+    observed_at = datetime.now(timezone.utc)
     
     # Generate expirations (weekly and monthly)
     expirations = []
@@ -119,14 +120,16 @@ def main():
     snapshot_dir = Path(__file__).parent.parent / "data" / "snapshots"
     snapshot_dir.mkdir(parents=True, exist_ok=True)
     
+    now = datetime.now(timezone.utc)
+    
     # Generate SPY sample
-    df, metadata = generate_sample_chain("SPY", spot=585.0)
+    df, metadata = generate_sample_chain("SPY", spot=585.0, seed=42)
     snapshot_id = "SPY_sample_offline"
     
     df.to_parquet(snapshot_dir / f"{snapshot_id}_cleaned.parquet", index=False)
     
     with open(snapshot_dir / f"{snapshot_id}_metadata.json", 'w') as f:
-        json.dump(metadata | {'snapshot_id': snapshot_id, 'ingested_at': datetime.utcnow().isoformat()}, f, indent=2, default=str)
+        json.dump(metadata | {'snapshot_id': snapshot_id, 'ingested_at': now.isoformat()}, f, indent=2, default=str)
     
     print(f"Created sample snapshot: {snapshot_id}")
     print(f"  Contracts: {len(df)}")
@@ -134,15 +137,26 @@ def main():
     print(f"  Location: {snapshot_dir / snapshot_id}_cleaned.parquet")
     
     # Generate QQQ sample
-    df_qqq, meta_qqq = generate_sample_chain("QQQ", spot=495.0)
+    df_qqq, meta_qqq = generate_sample_chain("QQQ", spot=495.0, seed=43)
     snapshot_id_qqq = "QQQ_sample_offline"
     
     df_qqq.to_parquet(snapshot_dir / f"{snapshot_id_qqq}_cleaned.parquet", index=False)
     
     with open(snapshot_dir / f"{snapshot_id_qqq}_metadata.json", 'w') as f:
-        json.dump(meta_qqq | {'snapshot_id': snapshot_id_qqq, 'ingested_at': datetime.utcnow().isoformat()}, f, indent=2, default=str)
+        json.dump(meta_qqq | {'snapshot_id': snapshot_id_qqq, 'ingested_at': now.isoformat()}, f, indent=2, default=str)
     
     print(f"Created sample snapshot: {snapshot_id_qqq}")
+    
+    # Generate NVDA sample (higher vol stock)
+    df_nvda, meta_nvda = generate_sample_chain("NVDA", spot=145.0, seed=44)
+    snapshot_id_nvda = "NVDA_sample_offline"
+    
+    df_nvda.to_parquet(snapshot_dir / f"{snapshot_id_nvda}_cleaned.parquet", index=False)
+    
+    with open(snapshot_dir / f"{snapshot_id_nvda}_metadata.json", 'w') as f:
+        json.dump(meta_nvda | {'snapshot_id': snapshot_id_nvda, 'ingested_at': now.isoformat()}, f, indent=2, default=str)
+    
+    print(f"Created sample snapshot: {snapshot_id_nvda}")
 
 
 if __name__ == "__main__":

@@ -15,8 +15,8 @@ COPY backend/ backend/
 # Install Python dependencies
 RUN pip install --no-cache-dir -e .
 
-# Create data directory
-RUN mkdir -p /app/data/snapshots
+# Copy sample data for offline use
+COPY data/ data/
 
 # Set environment variables
 ENV PYTHONPATH=/app/src:/app

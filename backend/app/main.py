@@ -20,6 +20,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 from backend.app.api.data import router as data_router
 from backend.app.api.pricing import router as pricing_router
 from backend.app.api.volatility import router as volatility_router
+from backend.app.api.experiments import router as experiments_router
 
 
 @asynccontextmanager
@@ -78,6 +79,7 @@ app.add_middleware(
 app.include_router(pricing_router, prefix="/api/v1")
 app.include_router(volatility_router, prefix="/api/v1")
 app.include_router(data_router, prefix="/api/v1")
+app.include_router(experiments_router, prefix="/api/v1")
 
 
 @app.get("/")
@@ -92,6 +94,7 @@ async def root():
             "pricing": "/api/v1/pricing",
             "volatility": "/api/v1/volatility",
             "data": "/api/v1/data",
+            "experiments": "/api/v1/experiments",
         },
     }
 

@@ -2,7 +2,7 @@
   "symbol": "SPY",
   "provider": "synthetic",
   "spot": 585.0,
-  "observed_at": "2026-11-07T00:44:20.661709",
+  "observed_at": "2026-11-07T01:26:43.633019+00:00",
   "expirations": [
     "2026-11-14",
     "2026-11-21",
@@ -16,5 +16,5 @@
   "version": "1.0",
   "note": "Synthetic data for testing - not real market quotes",
   "snapshot_id": "SPY_sample_offline",
-  "ingested_at": "2026-11-07T00:44:21.132007"
+  "ingested_at": "2026-11-07T01:26:43.632990+00:00"
 }

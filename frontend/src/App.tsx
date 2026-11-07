@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { TrendingUp, Activity, BarChart3, Database } from 'lucide-react'
+import { TrendingUp, Activity, BarChart3, Database, FlaskConical } from 'lucide-react'
 import PricingWorkbench from './components/PricingWorkbench'
 import VolatilitySurfaceLab from './components/VolatilitySurfaceLab'
+import { MLResearchStudio } from './components/MLResearchStudio'
 
-type Tab = 'pricing' | 'surface'
+type Tab = 'pricing' | 'surface' | 'ml'
 
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>('pricing')
@@ -59,6 +60,17 @@ function App() {
               <BarChart3 className="w-4 h-4" />
               Volatility Surface Lab
             </button>
+            <button
+              onClick={() => setActiveTab('ml')}
+              className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === 'ml'
+                  ? 'border-primary-600 text-primary-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <FlaskConical className="w-4 h-4" />
+              ML Research Studio
+            </button>
           </div>
         </div>
       </nav>
@@ -67,6 +79,7 @@ function App() {
       <main className="max-w-7xl mx-auto px-4 py-6">
         {activeTab === 'pricing' && <PricingWorkbench />}
         {activeTab === 'surface' && <VolatilitySurfaceLab />}
+        {activeTab === 'ml' && <MLResearchStudio />}
       </main>
 
       {/* Footer */}
