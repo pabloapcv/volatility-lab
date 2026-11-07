@@ -207,7 +207,13 @@ class SnapshotManager:
         if not snapshots:
             return None
         
-        latest = snapshots[0]
+        # Prefer a real yfinance snapshot over the synthetic offline demo.
+        real = [
+            s for s in snapshots
+            if str(s.get('provider', '')).lower() not in ('synthetic', 'demo')
+            and not str(s.get('snapshot_id', '')).endswith('_sample_offline')
+        ]
+        latest = real[0] if real else snapshots[0]
         snapshot_id = latest['snapshot_id']
         
         return load_snapshot(

@@ -14,39 +14,33 @@ An open-source research platform combining numerical derivatives pricing, stocha
 
 ## Screenshots
 
-| Pricing Workbench | Volatility Surface |
-|-------------------|-------------------|
-| ![Pricing Workbench](docs/screenshots/pricing_workbench.png) | ![Volatility Surface](docs/screenshots/volatility_surface_spy.png) |
+| Pricing Workbench | Volatility Surface | ML Research Studio |
+|-------------------|--------------------|--------------------|
+| ![Pricing Workbench](docs/screenshots/pricing_workbench.png) | ![Volatility Surface](docs/screenshots/volatility_surface_spy.png) | ![ML Research Studio](docs/screenshots/ml_research_studio.png) |
 
 ---
 
-## Quick Demo
+## Quick Start
 
 ```bash
-# Clone and set up
 git clone https://github.com/pabloapcv/volatility-lab.git
 cd volatility-lab
-
-# Install Python dependencies
-pip install -e ".[dev]"
-
-# Generate sample data for offline use
-python scripts/create_sample_snapshot.py
-
-# Run tests
-pytest tests/ -v
-
-# Start the API server
-uvicorn backend.app.main:app --reload
-
-# In another terminal, start frontend
-cd frontend && npm install && npm run dev
+make demo
 ```
 
-Open http://localhost:5173 to explore:
-- **Options Pricing Workbench**: Compare Black-Scholes, Binomial, and Monte Carlo prices
-- **Volatility Surface Lab**: 3D volatility surfaces, smiles, and term structure
-- **ML Research Studio**: Run and analyze volatility forecasting experiments
+That installs Python + frontend deps and starts both servers. Open
+[http://127.0.0.1:5175](http://127.0.0.1:5175) (API at [http://127.0.0.1:8765](http://127.0.0.1:8765)).
+
+Docker alternative: `docker compose up --build` (same ports).
+
+What you get without running anything else:
+- **Options Pricing Workbench**: Black-Scholes, CRR binomial, and Monte Carlo with matching Greek units
+- **Volatility Surface Lab**: committed **yfinance** SPY/QQQ/NVDA chain from 2026-11-07 (synthetic chain kept as offline fallback)
+- **ML Research Studio**: preloaded FR-07 table (5 models, CIs, DM tests, H1 **not supported**)
+
+```bash
+make test          # pytest
+```
 
 ---
 
@@ -71,7 +65,9 @@ This platform enables investigation of questions like:
 - **Test period:** 252 trading days (Oct 2025 – Oct 2026)
 - **Training:** Expanding window, 1884 samples at test time
 
-*Note: The bundled sample option chain snapshots in `data/snapshots/` are synthetic (for offline demo only). The forecasting results below use real historical prices from yfinance.*
+*Option-chain dashboard data:* compact **yfinance** snapshots committed under `data/snapshots/*_yfinance_sample_*` (SPY, QQQ, NVDA, observed 2026-11-07; nearby expiries and near-ATM strikes). Synthetic `*_sample_offline` chains remain as an offline fallback if a real file is missing.
+
+*Forecasting results below:* real yfinance **daily prices** (not the option snapshots), 2018-01-02 to 2026-11-06, 252 test observations.
 
 **Methodology:**
 - Walk-forward validation: 2-year initial training, 1-year held-out final test
@@ -229,27 +225,31 @@ Interactive docs at http://localhost:8000/docs
 
 ## Running Locally
 
-### Option 1: Python + npm (Development)
+### One command (recommended)
 
 ```bash
-# Backend
-pip install -e ".[dev]"
-python scripts/create_sample_snapshot.py
-uvicorn backend.app.main:app --reload --port 8000
-
-# Frontend (separate terminal)
-cd frontend
-npm install
-npm run dev
+make demo
 ```
 
-### Option 2: Docker Compose
+API: http://127.0.0.1:8765 · UI: http://127.0.0.1:5175
+
+### Docker
 
 ```bash
-docker compose up dev
+docker compose up --build
 ```
 
-Opens backend on :8000 and frontend on :5173.
+Same ports as `make demo`.
+
+### Manual (two terminals)
+
+```bash
+pip install -e ".[dev,ml]"
+python -m uvicorn backend.app.main:app --host 0.0.0.0 --port 8765
+
+# other terminal
+cd frontend && npm ci && npm run dev
+```
 
 ### Run Tests
 
@@ -323,7 +323,7 @@ volatilitylab/
 - **European Monte Carlo only**: American options require LSM or similar
 - **No stochastic vol**: Heston model is out of scope for MVP
 - **ML forecasting gains are modest**: XGBoost does not significantly beat HAR-RV or GARCH in rigorous testing
-- **Bundled option chain snapshots are synthetic**: For offline UI demo only; real options data requires yfinance or API access
+- **Dashboard chains are a compact sample**: one yfinance day, nearby expiries / near-ATM strikes. Synthetic snapshots are the offline fallback only.
 
 ### Roadmap
 
@@ -331,6 +331,14 @@ volatilitylab/
 2. **Delta-Hedging Backtest**: Empirical hedge performance analysis
 3. **Risk Analytics**: VaR/ES with scenario analysis
 4. **LSTM Volatility**: Deep learning volatility forecasting comparison
+
+---
+
+## What I learned
+
+The first HAR-RV implementation reused `rvar_5d` as both the daily and weekly component, so the “standard benchmark” was misspecified. After the fix (daily \(r_t^2 \times 252\), weekly `rvar_5d`, monthly `rvar_21d`, fit on the train fold only), HAR-RV jumped from a weak extra to a competitive OLS baseline — and the headline “XGBoost beats HAR-RV” result disappeared under Holm-corrected Diebold-Mariano tests.
+
+GARCH(1,1) holds up because a simple conditional-variance recursion is a strong default for equity index and single-name RV at these horizons. It wins SPY 20d and both NVDA horizons. Tree models with point-in-time features can look good in a table and still fail a shuffle check (NVDA 20d) once the baseline is honest.
 
 ---
 

@@ -255,7 +255,9 @@ export default function VolatilitySurfaceLab() {
             {hasData ? (
               <span className="flex items-center gap-1 text-sm text-green-600">
                 <CheckCircle2 className="w-4 h-4" />
-                {snapshotsQuery.data?.data.snapshots[0]?.valid_contracts || 0} contracts
+                {snapshotsQuery.data?.data.snapshots.find((s) => !s.provider?.includes('synthetic'))?.valid_contracts
+                  || snapshotsQuery.data?.data.snapshots[0]?.valid_contracts
+                  || 0} contracts
               </span>
             ) : (
               <span className="flex items-center gap-1 text-sm text-amber-600">
@@ -346,6 +348,26 @@ export default function VolatilitySurfaceLab() {
             </div>
             <div className="text-sm text-gray-500">observation time</div>
           </div>
+        </div>
+      )}
+
+      {surfaceQuery.data?.data.metadata && (
+        <div className={`card ${surfaceQuery.data.data.metadata.is_synthetic ? 'bg-amber-50 border-amber-200' : 'bg-sky-50 border-sky-200'}`}>
+          <h3 className="text-sm font-medium text-gray-800 mb-1">Data source</h3>
+          <p className="text-sm text-gray-700">
+            {surfaceQuery.data.data.metadata.source_label
+              || (surfaceQuery.data.data.metadata.is_synthetic
+                ? 'Synthetic demo fallback — not live market quotes'
+                : `yfinance · ${String(surfaceQuery.data.data.metadata.observed_at || '').slice(0, 10)}`)}
+          </p>
+          {surfaceQuery.data.data.metadata.note && (
+            <p className="text-xs text-gray-500 mt-1">{surfaceQuery.data.data.metadata.note}</p>
+          )}
+          {surfaceQuery.data.data.metadata.is_synthetic && (
+            <p className="text-xs text-amber-700 mt-1">
+              A real yfinance snapshot is preferred when present. This synthetic chain is the offline fallback.
+            </p>
+          )}
         </div>
       )}
 

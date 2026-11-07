@@ -12,10 +12,10 @@ COPY pyproject.toml .
 COPY src/ src/
 COPY backend/ backend/
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -e .
+# Install Python dependencies (ML extras so "Run Experiment" works in Docker)
+RUN pip install --no-cache-dir -e ".[ml]"
 
-# Copy sample data for offline use
+# Copy sample data for offline use (includes committed yfinance chains + FR-07 JSON)
 COPY data/ data/
 
 # Set environment variables

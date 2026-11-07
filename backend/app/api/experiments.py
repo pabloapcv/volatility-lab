@@ -1,6 +1,6 @@
 """Experiments API endpoints."""
 
-import asyncio
+import json
 from pathlib import Path
 from typing import Literal
 
@@ -55,6 +55,16 @@ class ExperimentSummary(BaseModel):
 
 # In-memory tracking of running experiments
 _running_experiments: dict[str, str] = {}
+
+PUBLISHED_RESULTS_PATH = Path("./data/experiments/fr07_published.json")
+
+
+@router.get("/published")
+async def get_published_results() -> dict:
+    """Committed FR-07 results shown on first visit (no experiment run required)."""
+    if not PUBLISHED_RESULTS_PATH.exists():
+        raise HTTPException(status_code=404, detail="Published results file not found")
+    return json.loads(PUBLISHED_RESULTS_PATH.read_text())
 
 
 def _run_experiment_sync(request: ExperimentRequest) -> str:

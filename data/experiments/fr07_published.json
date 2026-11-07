@@ -1,0 +1,41 @@
+{
+  "id": "fr07_readme",
+  "title": "FR-07 realized-volatility forecast (committed results)",
+  "h1_verdict": "NOT SUPPORTED",
+  "h1_statement": "H1: XGBoost significantly beats HAR-RV (Diebold-Mariano, Holm-corrected α=0.05)",
+  "h1_summary": "XGBoost does not significantly outperform HAR-RV after Holm correction. GARCH(1,1) is the best model for SPY 20d, NVDA 5d, and NVDA 20d.",
+  "data_source": "yfinance daily prices (SPY, QQQ, NVDA), 2018-01-02 to 2026-11-06",
+  "test_period": "252 trading days (2025-10-09 to 2026-10-09)",
+  "n_test": 252,
+  "methodology": [
+    "Walk-forward validation: 2-year initial training, 1-year held-out test",
+    "Purge gap max(5, horizon+1) days; embargo 20 days",
+    "Stationary block bootstrap CIs (n=500)",
+    "Diebold-Mariano with HAC variance, HLN correction, Holm-Bonferroni"
+  ],
+  "models": ["HV (21d)", "EWMA (λ=0.94)", "GARCH(1,1)", "HAR-RV", "XGBoost (100 trees, depth 4)"],
+  "rows": [
+    {"symbol": "SPY", "horizon": "5d", "hv": -2.099, "hv_ci": [-2.718, -1.207], "ewma": -2.573, "ewma_ci": [-3.048, -1.889], "garch": -3.004, "garch_ci": [-3.307, -2.567], "har": -3.042, "har_ci": [-3.188, -2.843], "xgboost": -3.135, "xgboost_ci": [-3.341, -2.897], "best": "xgboost"},
+    {"symbol": "SPY", "horizon": "20d", "hv": -2.813, "hv_ci": [-3.119, -2.443], "ewma": -2.931, "ewma_ci": [-3.197, -2.609], "garch": -3.106, "garch_ci": [-3.256, -2.924], "har": -2.933, "har_ci": [-3.023, -2.827], "xgboost": -3.052, "xgboost_ci": [-3.221, -2.868], "best": "garch"},
+    {"symbol": "QQQ", "horizon": "5d", "hv": 0.834, "hv_ci": [-0.373, 2.362], "ewma": -0.703, "ewma_ci": [-1.510, 0.317], "garch": -1.589, "garch_ci": [-2.130, -0.905], "har": -2.244, "har_ci": [-2.438, -2.010], "xgboost": -2.277, "xgboost_ci": [-2.499, -2.041], "best": "xgboost"},
+    {"symbol": "QQQ", "horizon": "20d", "hv": -1.377, "hv_ci": [-1.867, -0.790], "ewma": -1.515, "ewma_ci": [-1.968, -0.971], "garch": -2.096, "garch_ci": [-2.359, -1.780], "har": -2.183, "har_ci": [-2.325, -2.019], "xgboost": -2.187, "xgboost_ci": [-2.376, -1.968], "best": "xgboost"},
+    {"symbol": "NVDA", "horizon": "5d", "hv": -0.930, "hv_ci": [-1.134, -0.709], "ewma": -0.900, "ewma_ci": [-1.121, -0.661], "garch": -0.965, "garch_ci": [-1.098, -0.821], "har": -0.883, "har_ci": [-0.995, -0.759], "xgboost": -0.818, "xgboost_ci": [-0.984, -0.664], "best": "garch"},
+    {"symbol": "NVDA", "horizon": "20d", "hv": -0.406, "hv_ci": [-0.673, -0.151], "ewma": -0.628, "ewma_ci": [-0.851, -0.415], "garch": -0.941, "garch_ci": [-1.026, -0.860], "har": -0.852, "har_ci": [-0.921, -0.789], "xgboost": -0.799, "xgboost_ci": [-0.895, -0.712], "best": "garch"}
+  ],
+  "dm_tests": [
+    {"symbol": "SPY", "horizon": "5d", "dm_stat": -2.161, "p_value": 0.0307, "significant_after_holm": false},
+    {"symbol": "SPY", "horizon": "20d", "dm_stat": -2.151, "p_value": 0.0315, "significant_after_holm": false},
+    {"symbol": "QQQ", "horizon": "5d", "dm_stat": -0.842, "p_value": 0.3998, "significant_after_holm": false},
+    {"symbol": "QQQ", "horizon": "20d", "dm_stat": -0.097, "p_value": 0.9226, "significant_after_holm": false},
+    {"symbol": "NVDA", "horizon": "5d", "dm_stat": 1.865, "p_value": 0.0621, "significant_after_holm": false},
+    {"symbol": "NVDA", "horizon": "20d", "dm_stat": 1.657, "p_value": 0.0974, "significant_after_holm": false}
+  ],
+  "shuffle_tests": [
+    {"symbol": "SPY", "horizon": "5d", "real_qlike": -3.1348, "shuffled_qlike": -2.8339, "edge_preserved": true},
+    {"symbol": "SPY", "horizon": "20d", "real_qlike": -3.0525, "shuffled_qlike": -2.8422, "edge_preserved": true},
+    {"symbol": "QQQ", "horizon": "5d", "real_qlike": -2.2773, "shuffled_qlike": -2.1232, "edge_preserved": true},
+    {"symbol": "QQQ", "horizon": "20d", "real_qlike": -2.1867, "shuffled_qlike": -2.1357, "edge_preserved": true},
+    {"symbol": "NVDA", "horizon": "5d", "real_qlike": -0.8177, "shuffled_qlike": -0.7917, "edge_preserved": true},
+    {"symbol": "NVDA", "horizon": "20d", "real_qlike": -0.7987, "shuffled_qlike": -0.8177, "edge_preserved": false}
+  ]
+}

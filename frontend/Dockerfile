@@ -11,7 +11,7 @@ RUN npm ci
 # Copy source
 COPY . .
 
-EXPOSE 5173
+EXPOSE 5175
 
 # Use 0.0.0.0 to allow external connections
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5175"]

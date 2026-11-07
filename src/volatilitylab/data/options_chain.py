@@ -65,7 +65,7 @@ class QuoteQualityFilter:
         for _, row in df.iterrows():
             bid = row.get('bid', 0) or 0
             ask = row.get('ask', 0) or 0
-            oi = row.get('openInterest', 0) or 0
+            oi = row.get('open_interest', row.get('openInterest', 0)) or 0
             volume = row.get('volume', 0) or 0
             
             # Check for invalid data

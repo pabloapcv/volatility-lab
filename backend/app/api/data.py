@@ -127,6 +127,11 @@ async def list_snapshots(symbol: str | None = None) -> SnapshotListResponse:
                     expirations=s.get('expirations', []),
                     total_contracts=s.get('total_contracts', 0),
                     valid_contracts=s.get('valid_contracts', 0),
+                    is_synthetic=(
+                        str(s.get('provider', '')).lower() in ('synthetic', 'demo')
+                        or str(s.get('snapshot_id', '')).endswith('_sample_offline')
+                    ),
+                    note=s.get('note'),
                 )
                 for s in snapshots
             ],

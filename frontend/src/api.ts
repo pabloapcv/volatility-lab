@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8347'
+const API_BASE = import.meta.env.VITE_API_URL || ''
 
 export const api = axios.create({
   baseURL: `${API_BASE}/api/v1`,
@@ -118,6 +118,11 @@ export interface SurfaceResponse {
     observed_at: string
     n_observed_points: number
     warnings: string[]
+    provider?: string
+    snapshot_id?: string
+    is_synthetic?: boolean
+    note?: string
+    source_label?: string
   }
   points: SurfacePoint[]
   grid?: {
@@ -162,6 +167,8 @@ export interface SnapshotInfo {
   spot: number
   total_contracts: number
   valid_contracts: number
+  is_synthetic?: boolean
+  note?: string
 }
 
 // API functions

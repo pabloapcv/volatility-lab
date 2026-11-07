@@ -4,47 +4,29 @@ services:
       context: .
       dockerfile: Dockerfile.backend
     ports:
-      - "${API_PORT:-8000}:8000"
+      - "8765:8000"
     environment:
       - API_HOST=0.0.0.0
       - API_PORT=8000
       - PYTHONPATH=/app/src:/app
     volumes:
       - ./data:/app/data
+      - ./experiments:/app/experiments
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      interval: 10s
+      timeout: 5s
+      retries: 12
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
     ports:
-      - "${FRONTEND_PORT:-5173}:5173"
+      - "5175:5175"
     environment:
-      - VITE_API_URL=http://backend:8000
+      - VITE_API_URL=
+      - VITE_PROXY_TARGET=http://backend:8000
     depends_on:
       backend:
         condition: service_healthy
-
-  # All-in-one development service
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile.app
-    ports:
-      - "${API_PORT:-8000}:8000"
-      - "${FRONTEND_PORT:-5173}:5173"
-    volumes:
-      - ./data:/app/data
-    environment:
-      - API_HOST=0.0.0.0
-      - API_PORT=8000
-      - PYTHONPATH=/app/src:/app
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3

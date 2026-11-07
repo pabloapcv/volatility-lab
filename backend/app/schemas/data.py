@@ -57,6 +57,8 @@ class SnapshotInfo(BaseModel):
     expirations: list[str]
     total_contracts: int
     valid_contracts: int
+    is_synthetic: bool = False
+    note: str | None = None
 
 
 class SnapshotListResponse(BaseModel):

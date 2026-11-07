@@ -19,6 +19,7 @@ from volatilitylab.pricing.binomial import (
 )
 from volatilitylab.pricing.black_scholes import (
     OptionType,
+    black_scholes_greeks,
     black_scholes_price,
 )
 
@@ -221,6 +222,21 @@ class TestNumericalGreeks:
         )
         
         assert result.greeks.vega > 0
+
+    def test_vega_rho_units_match_black_scholes(self):
+        """Binomial Vega/Rho must use the same per-1% units as Black-Scholes."""
+        params = dict(
+            spot=500, strike=510, time_to_expiry=0.25,
+            risk_free_rate=0.045, volatility=0.22,
+            option_type=OptionType.CALL,
+        )
+        bs = black_scholes_greeks(**params, dividend_yield=0.01)
+        binom = BinomialModel(steps=200).price(**params, dividend_yield=0.01)
+
+        # Workbench screenshot case: previously off by ~100x (0.99 vs 0.0099).
+        assert abs(binom.greeks.vega - bs.vega) / abs(bs.vega) < 0.05
+        assert abs(binom.greeks.rho - bs.rho) / abs(bs.rho) < 0.05
+        assert binom.greeks.vega > 0.5  # not the 0.01-scaled value
 
 
 class TestAmericanOptions:

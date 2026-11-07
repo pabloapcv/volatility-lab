@@ -93,8 +93,9 @@ logs/
 # Data caches (keep sample snapshots)
 data/snapshots/cache/
 
-# Experiments (generated, can be reproduced)
-experiments/
+# Experiments (generated, can be reproduced). Bundled FR-07 JSON lives in data/experiments/.
+experiments/*
+!experiments/.gitkeep
 
 # Uploads
 uploads/

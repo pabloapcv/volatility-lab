@@ -247,7 +247,9 @@ def _estimate_greeks(
     else:
         gamma = 0.0
     
-    # Vega: central difference on volatility (per 1% = 0.01)
+    # Vega: central difference with a 1-vol-point bump (σ ± 0.01).
+    # (V_up - V_down) / 2 is already the change per 1% volatility, matching
+    # Black-Scholes vega (which multiplies analytic ∂V/∂σ by 0.01).
     vol_bump = 0.01
     V_vol_up = binomial_price(
         spot, strike, time_to_expiry, risk_free_rate, volatility + vol_bump,
@@ -257,7 +259,7 @@ def _estimate_greeks(
         spot, strike, time_to_expiry, risk_free_rate, max(0.001, volatility - vol_bump),
         option_type, dividend_yield, steps, exercise_style
     )
-    vega = (V_vol_up - V_vol_down) / 2 * 0.01  # Scale to per 1% move
+    vega = (V_vol_up - V_vol_down) / 2.0
     
     # Theta: forward difference on time (per day)
     time_bump = 1 / 365
@@ -270,7 +272,8 @@ def _estimate_greeks(
     else:
         theta = 0.0
     
-    # Rho: central difference on rate (per 1% = 0.01)
+    # Rho: central difference with a 1-rate-point bump (r ± 0.01).
+    # Same units as Black-Scholes rho (per 1% change in the interest rate).
     rate_bump = 0.01
     V_rate_up = binomial_price(
         spot, strike, time_to_expiry, risk_free_rate + rate_bump, volatility,
@@ -280,7 +283,7 @@ def _estimate_greeks(
         spot, strike, time_to_expiry, risk_free_rate - rate_bump, volatility,
         option_type, dividend_yield, steps, exercise_style
     )
-    rho = (V_rate_up - V_rate_down) / 2 * 0.01  # Scale to per 1% move
+    rho = (V_rate_up - V_rate_down) / 2.0
     
     return NumericalGreeks(
         delta=delta,

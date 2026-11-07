@@ -240,3 +240,53 @@ class TestDataEndpoints:
         data = response.json()
         assert "snapshots" in data
         assert "total" in data
+
+    def test_spy_surface_uses_real_snapshot_and_day_axis(self, client):
+        """Default SPY surface should load the committed yfinance sample with day expiries."""
+        response = client.get("/api/v1/volatility/surface/SPY")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["metadata"].get("is_synthetic") is False
+        assert data["metadata"].get("provider") == "yfinance"
+        assert data["metadata"]["n_observed_points"] > 10
+        expiries = [p["expiry"] for p in data["points"]]
+        # Days, not year fractions (those would be ~0.02–0.2).
+        assert max(expiries) > 5
+        assert min(expiries) >= 1.0
+        if data.get("grid"):
+            ys = [row[0] for row in data["grid"]["expiry"]]
+            assert max(ys) > 5
+
+
+class TestExperimentsEndpoints:
+    """Published FR-07 results must load without running an experiment."""
+
+    def test_published_results(self, client):
+        response = client.get("/api/v1/experiments/published")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["h1_verdict"] == "NOT SUPPORTED"
+        assert len(data["rows"]) == 6
+        assert len(data["dm_tests"]) == 6
+        assert any(not s["edge_preserved"] for s in data["shuffle_tests"])
+
+
+class TestGreeksUnits:
+    """Black-Scholes and binomial Vega/Rho must share per-1% units."""
+
+    def test_workbench_greeks_agree(self, client):
+        payload = {
+            "spot": 500,
+            "strike": 510,
+            "time_to_expiry": 0.25,
+            "risk_free_rate": 0.045,
+            "volatility": 0.22,
+            "option_type": "call",
+            "dividend_yield": 0.01,
+            "steps": 200,
+        }
+        bs = client.post("/api/v1/pricing/black-scholes", json=payload).json()
+        bn = client.post("/api/v1/pricing/binomial", json=payload).json()
+        assert abs(bn["greeks"]["vega"] - bs["greeks"]["vega"]) / abs(bs["greeks"]["vega"]) < 0.05
+        assert abs(bn["greeks"]["rho"] - bs["greeks"]["rho"]) / abs(bs["greeks"]["rho"]) < 0.05
+        assert bn["greeks"]["vega"] > 0.5

@@ -1,0 +1,22 @@
+{
+  "symbol": "NVDA",
+  "provider": "yfinance",
+  "spot": 186.63999938964844,
+  "observed_at": "2026-11-07T17:39:09.470288",
+  "expirations": [
+    "2026-11-09",
+    "2026-11-11",
+    "2026-11-13",
+    "2026-11-20",
+    "2026-11-27",
+    "2026-12-04",
+    "2026-12-11",
+    "2026-12-18"
+  ],
+  "total_contracts": 269,
+  "valid_contracts": 269,
+  "snapshot_id": "NVDA_yfinance_sample",
+  "ingested_at": "2026-11-07T17:39:11.329896+00:00",
+  "note": "Compact real options chain from yfinance for dashboard demo. Nearby expirations and near-ATM strikes only.",
+  "is_synthetic": false
+}

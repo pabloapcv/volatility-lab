@@ -189,8 +189,25 @@ async def get_volatility_surface(
                 observed_points=grid_data['observed_points'],
             )
         
+        provider = metadata.get('provider', 'unknown')
+        is_synthetic = (
+            str(provider).lower() in ('synthetic', 'demo')
+            or str(metadata.get('snapshot_id', '')).endswith('_sample_offline')
+        )
+        meta = {
+            **surface.metadata.__dict__,
+            'provider': provider,
+            'snapshot_id': metadata.get('snapshot_id'),
+            'is_synthetic': is_synthetic,
+            'note': metadata.get('note'),
+            'source_label': (
+                f"Synthetic demo fallback — not live market quotes"
+                if is_synthetic
+                else f"yfinance · {str(metadata.get('observed_at', ''))[:10]}"
+            ),
+        }
         return SurfaceResponse(
-            metadata=surface.metadata.__dict__,
+            metadata=meta,
             points=points,
             grid=grid,
             warnings=surface.metadata.warnings,

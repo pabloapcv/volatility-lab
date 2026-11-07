@@ -66,9 +66,9 @@ all = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/volatilitylab/volatilitylab"
-Documentation = "https://github.com/volatilitylab/volatilitylab#readme"
-Repository = "https://github.com/volatilitylab/volatilitylab"
+Homepage = "https://github.com/pabloapcv/volatility-lab"
+Documentation = "https://github.com/pabloapcv/volatility-lab#readme"
+Repository = "https://github.com/pabloapcv/volatility-lab"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/volatilitylab"]

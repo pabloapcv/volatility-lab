@@ -44,9 +44,9 @@ stderr_logfile=/dev/stderr
 stderr_logfile_maxbytes=0
 
 [program:frontend]
-command=npm run dev
+command=npm run dev -- --host 0.0.0.0 --port 5175
 directory=/app/frontend
-environment=VITE_API_URL="http://localhost:8000"
+environment=VITE_API_URL="",VITE_PROXY_TARGET="http://127.0.0.1:8000"
 stdout_logfile=/dev/stdout
 stdout_logfile_maxbytes=0
 stderr_logfile=/dev/stderr
@@ -58,6 +58,6 @@ ENV PYTHONPATH=/app/src:/app
 ENV API_HOST=0.0.0.0
 ENV API_PORT=8000
 
-EXPOSE 8000 5173
+EXPOSE 8000 5175
 
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/supervisord.conf"]

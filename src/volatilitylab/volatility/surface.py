@@ -20,6 +20,38 @@ from volatilitylab.pricing.black_scholes import OptionType
 from volatilitylab.volatility.implied_vol import ImpliedVolSolver, IVStatus
 
 
+def _days_to_years(expiry_days: float) -> float:
+    """Convert calendar-day expiry to year fraction."""
+    return float(expiry_days) / 365.0
+
+
+def _tte_years_and_expiry_days(row, has_tte: bool, has_exp: bool) -> tuple[float, float]:
+    """
+    Return (time_to_expiry_years, expiry_days).
+
+    Surface coordinates are always calendar days so the 3D plot axis matches
+    the 'Days to Expiry' label. time_to_expiry stays in years for pricing.
+    """
+    import pandas as pd
+
+    if has_tte:
+        tte = float(row['time_to_expiry'])
+        # Defensive: some feeds store TTE already in days (> 3 years is unlikely
+        # for listed equity options in this app).
+        if tte > 3.0:
+            return tte / 365.0, tte
+        return tte, tte * 365.0
+
+    if has_exp:
+        exp_date = pd.to_datetime(row['expiration'])
+        now = pd.Timestamp.now()
+        days = float((exp_date - now).days)
+        days = max(days, 0.0)
+        return days / 365.0, days
+
+    raise ValueError("Need either 'time_to_expiry' or 'expiration'")
+
+
 class DataQuality(str, Enum):
     """Data quality classification."""
     OBSERVED = "observed"
@@ -139,16 +171,8 @@ class VolatilitySurface:
         for _, row in chain.iterrows():
             strike = float(row['strike'])
             
-            # Get time to expiry
-            if has_tte:
-                tte = float(row['time_to_expiry'])
-                expiry = tte  # Use TTE as expiry identifier
-            else:
-                # Calculate from expiration date
-                exp_date = pd.to_datetime(row['expiration'])
-                now = pd.Timestamp.now()
-                tte = (exp_date - now).days / 365
-                expiry = (exp_date - now).days
+            # Time to expiry in years; expiry axis is always calendar days.
+            tte, expiry = _tte_years_and_expiry_days(row, has_tte=has_tte, has_exp=has_exp)
             
             if tte < min_tte:
                 continue
@@ -275,7 +299,7 @@ class VolatilitySurface:
             return None, DataQuality.SPARSE
         
         # Calculate moneyness
-        tte = expiry / 365 if expiry > 1 else expiry
+        tte = _days_to_years(expiry)
         forward = spot * np.exp(
             (self.metadata.risk_free_rate - self.metadata.dividend_yield) * tte
         )
@@ -323,7 +347,7 @@ class VolatilitySurface:
             Smile data including strikes, IVs, and quality flags
         """
         spot = self.metadata.spot
-        tte = expiry / 365 if expiry > 1 else expiry
+        tte = _days_to_years(expiry)
         forward = spot * np.exp(
             (self.metadata.risk_free_rate - self.metadata.dividend_yield) * tte
         )
@@ -395,7 +419,7 @@ class VolatilitySurface:
         spot = self.metadata.spot
         
         for expiry in expiries:
-            tte = expiry / 365 if expiry > 1 else expiry
+            tte = _days_to_years(expiry)
             forward = spot * np.exp(
                 (self.metadata.risk_free_rate - self.metadata.dividend_yield) * tte
             )
@@ -444,13 +468,15 @@ class VolatilitySurface:
             for j in range(n_strikes):
                 expiry = E[i, j]
                 moneyness = M[i, j]
-                tte = expiry / 365 if expiry > 1 else expiry
+                tte = _days_to_years(expiry)
                 forward = spot * np.exp(
                     (self.metadata.risk_free_rate - self.metadata.dividend_yield) * tte
                 )
                 strike = forward * np.exp(moneyness)
                 
                 iv, quality = self.get_iv(strike, expiry)
+                if iv is not None:
+                    iv = float(np.clip(iv, 0.01, 3.0))
                 IV[i, j] = iv if iv is not None else np.nan
                 
                 quality_map = {

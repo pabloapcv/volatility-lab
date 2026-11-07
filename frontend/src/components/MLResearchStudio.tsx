@@ -41,11 +41,57 @@ interface ExperimentListItem {
   n_models: number;
 }
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8765';
+interface PublishedRow {
+  symbol: string;
+  horizon: string;
+  hv: number;
+  hv_ci: [number, number];
+  ewma: number;
+  ewma_ci: [number, number];
+  garch: number;
+  garch_ci: [number, number];
+  har: number;
+  har_ci: [number, number];
+  xgboost: number;
+  xgboost_ci: [number, number];
+  best: string;
+}
+
+interface PublishedResults {
+  id: string;
+  title: string;
+  h1_verdict: string;
+  h1_statement: string;
+  h1_summary: string;
+  data_source: string;
+  test_period: string;
+  n_test: number;
+  methodology: string[];
+  models: string[];
+  rows: PublishedRow[];
+  dm_tests: {
+    symbol: string;
+    horizon: string;
+    dm_stat: number;
+    p_value: number;
+    significant_after_holm: boolean;
+  }[];
+  shuffle_tests: {
+    symbol: string;
+    horizon: string;
+    real_qlike: number;
+    shuffled_qlike: number;
+    edge_preserved: boolean;
+  }[];
+}
+
+const API_BASE = import.meta.env.VITE_API_URL || '';
 
 export function MLResearchStudio() {
   const [experiments, setExperiments] = useState<ExperimentListItem[]>([]);
   const [selectedExperiment, setSelectedExperiment] = useState<ExperimentSummary | null>(null);
+  const [published, setPublished] = useState<PublishedResults | null>(null);
+  const [showPublished, setShowPublished] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
@@ -68,6 +114,18 @@ export function MLResearchStudio() {
 
   useEffect(() => {
     loadExperiments();
+    fetch(`${API_BASE}/api/v1/experiments/published`)
+      .then((res) => {
+        if (!res.ok) throw new Error('Failed to load published results');
+        return res.json();
+      })
+      .then((data: PublishedResults) => {
+        setPublished(data);
+        setShowPublished(true);
+      })
+      .catch((e) => {
+        console.error('Failed to load published FR-07 results:', e);
+      });
   }, [loadExperiments]);
 
   const loadExperimentSummary = async (id: string) => {
@@ -188,15 +246,43 @@ export function MLResearchStudio() {
               Experiments
             </h3>
             <div className="space-y-2 max-h-96 overflow-y-auto">
-              {experiments.length === 0 ? (
+              {published && (
+                <button
+                  onClick={() => {
+                    setShowPublished(true);
+                    setSelectedExperiment(null);
+                  }}
+                  className={`w-full text-left p-3 rounded-lg border transition-colors ${
+                    showPublished
+                      ? 'bg-blue-50 border-blue-500 dark:bg-blue-900'
+                      : 'hover:bg-gray-50 dark:hover:bg-gray-700 border-gray-200 dark:border-gray-600'
+                  }`}
+                >
+                  <div className="font-medium text-gray-900 dark:text-white">
+                    FR-07 committed results
+                  </div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                    SPY · QQQ · NVDA · 252 test days
+                  </div>
+                  <div className="text-xs mt-1 text-green-600">preloaded</div>
+                </button>
+              )}
+              {experiments.length === 0 && !published ? (
                 <p className="text-gray-500 dark:text-gray-400 text-sm">
                   No experiments yet. Run one above.
+                </p>
+              ) : experiments.length === 0 ? (
+                <p className="text-gray-500 dark:text-gray-400 text-xs">
+                  New runs appear here. The table on the right is the committed README result.
                 </p>
               ) : (
                 experiments.map((exp) => (
                   <button
                     key={exp.experiment_id}
-                    onClick={() => loadExperimentSummary(exp.experiment_id)}
+                    onClick={() => {
+                      setShowPublished(false);
+                      loadExperimentSummary(exp.experiment_id);
+                    }}
                     className={`w-full text-left p-3 rounded-lg border transition-colors ${
                       selectedExperiment?.experiment_id === exp.experiment_id
                         ? 'bg-blue-50 border-blue-500 dark:bg-blue-900'
@@ -231,6 +317,8 @@ export function MLResearchStudio() {
           <div className="md:col-span-2">
             {loading ? (
               <div className="text-center py-12 text-gray-500">Loading...</div>
+            ) : showPublished && published ? (
+              <PublishedResultsPanel published={published} />
             ) : selectedExperiment ? (
               <ExperimentDetails experiment={selectedExperiment} />
             ) : (
@@ -239,6 +327,139 @@ export function MLResearchStudio() {
               </div>
             )}
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function fmtCI(value: number, ci: [number, number]) {
+  return `${value.toFixed(2)} [${ci[0].toFixed(2)}, ${ci[1].toFixed(2)}]`;
+}
+
+function PublishedResultsPanel({ published }: { published: PublishedResults }) {
+  const models = [
+    { key: 'hv', label: 'HV' },
+    { key: 'ewma', label: 'EWMA' },
+    { key: 'garch', label: 'GARCH' },
+    { key: 'har', label: 'HAR-RV' },
+    { key: 'xgboost', label: 'XGBoost' },
+  ] as const;
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h4 className="font-semibold text-gray-900 dark:text-white">{published.title}</h4>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          {published.data_source}. Test window: {published.test_period} ({published.n_test} observations).
+        </p>
+      </div>
+
+      <div className={`rounded-lg p-4 ${
+        published.h1_verdict === 'NOT SUPPORTED'
+          ? 'bg-amber-50 border border-amber-200'
+          : 'bg-green-50 border border-green-200'
+      }`}>
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-sm text-gray-800">{published.h1_statement}</span>
+          <span className="px-2 py-1 rounded text-xs font-semibold bg-white text-amber-800 border border-amber-300 whitespace-nowrap">
+            {published.h1_verdict}
+          </span>
+        </div>
+        <p className="text-sm text-gray-700 mt-2">{published.h1_summary}</p>
+      </div>
+
+      <div className="overflow-x-auto border rounded-lg">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="bg-gray-100 dark:bg-gray-700">
+              <th className="px-2 py-2 text-left">Symbol</th>
+              <th className="px-2 py-2 text-left">H</th>
+              {models.map((m) => (
+                <th key={m.key} className="px-2 py-2 text-right">{m.label}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {published.rows.map((row) => (
+              <tr key={`${row.symbol}-${row.horizon}`} className="border-t">
+                <td className="px-2 py-2 font-medium">{row.symbol}</td>
+                <td className="px-2 py-2">{row.horizon}</td>
+                {models.map((m) => {
+                  const value = row[m.key] as number;
+                  const ci = row[`${m.key}_ci` as keyof PublishedRow] as [number, number];
+                  const isBest = row.best === m.key;
+                  return (
+                    <td
+                      key={m.key}
+                      className={`px-2 py-2 text-right font-mono ${isBest ? 'font-bold text-blue-700' : ''}`}
+                    >
+                      {fmtCI(value, ci)}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <p className="text-xs text-gray-500 px-2 py-2">
+          QLIKE ± 95% CI (lower is better). Bold = best model on that row.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="border rounded-lg overflow-hidden">
+          <div className="bg-gray-100 dark:bg-gray-700 px-3 py-2 font-medium text-sm">
+            XGBoost vs HAR-RV (DM)
+          </div>
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b">
+                <th className="px-2 py-1 text-left">Case</th>
+                <th className="px-2 py-1 text-right">DM</th>
+                <th className="px-2 py-1 text-right">p</th>
+                <th className="px-2 py-1 text-center">Holm</th>
+              </tr>
+            </thead>
+            <tbody>
+              {published.dm_tests.map((t) => (
+                <tr key={`${t.symbol}-${t.horizon}`} className="border-t">
+                  <td className="px-2 py-1">{t.symbol} {t.horizon}</td>
+                  <td className="px-2 py-1 text-right font-mono">{t.dm_stat.toFixed(2)}</td>
+                  <td className="px-2 py-1 text-right font-mono">{t.p_value.toFixed(3)}</td>
+                  <td className="px-2 py-1 text-center">{t.significant_after_holm ? '✓' : '✗'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="border rounded-lg overflow-hidden">
+          <div className="bg-gray-100 dark:bg-gray-700 px-3 py-2 font-medium text-sm">
+            Shuffle test (leakage check)
+          </div>
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b">
+                <th className="px-2 py-1 text-left">Case</th>
+                <th className="px-2 py-1 text-right">Real</th>
+                <th className="px-2 py-1 text-right">Shuffled</th>
+                <th className="px-2 py-1 text-center">Edge</th>
+              </tr>
+            </thead>
+            <tbody>
+              {published.shuffle_tests.map((t) => (
+                <tr key={`${t.symbol}-${t.horizon}`} className="border-t">
+                  <td className="px-2 py-1">{t.symbol} {t.horizon}</td>
+                  <td className="px-2 py-1 text-right font-mono">{t.real_qlike.toFixed(2)}</td>
+                  <td className="px-2 py-1 text-right font-mono">{t.shuffled_qlike.toFixed(2)}</td>
+                  <td className="px-2 py-1 text-center">{t.edge_preserved ? '✓' : '✗'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="text-xs text-gray-500 px-2 py-2">
+            NVDA 20d is the case where shuffled targets beat the real fit — treat that row as noise.
+          </p>
         </div>
       </div>
     </div>

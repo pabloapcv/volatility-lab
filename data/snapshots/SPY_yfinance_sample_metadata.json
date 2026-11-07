@@ -1,0 +1,22 @@
+{
+  "symbol": "SPY",
+  "provider": "yfinance",
+  "spot": 735.2899780273438,
+  "observed_at": "2026-11-07T17:39:03.595765",
+  "expirations": [
+    "2026-11-09",
+    "2026-11-10",
+    "2026-11-11",
+    "2026-11-12",
+    "2026-11-13",
+    "2026-11-20",
+    "2026-11-27",
+    "2026-11-30"
+  ],
+  "total_contracts": 905,
+  "valid_contracts": 905,
+  "snapshot_id": "SPY_yfinance_sample",
+  "ingested_at": "2026-11-07T17:39:06.753727+00:00",
+  "note": "Compact real options chain from yfinance for dashboard demo. Nearby expirations and near-ATM strikes only.",
+  "is_synthetic": false
+}
