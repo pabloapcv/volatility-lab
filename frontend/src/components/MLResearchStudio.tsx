@@ -183,29 +183,29 @@ export function MLResearchStudio() {
           'Headline: H1 (XGBoost beats HAR-RV) is NOT SUPPORTED after Holm correction.',
         ]}
       />
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+      <div className="card">
+        <h2 className="text-lg font-semibold text-gray-900 mb-1">
           ML Research Studio
         </h2>
-        <p className="text-gray-600 dark:text-gray-300 mb-6">
+        <p className="text-sm text-gray-500 mb-4">
           Run and analyze volatility forecasting experiments with walk-forward validation,
           bootstrap confidence intervals, and Diebold-Mariano hypothesis testing.
         </p>
 
         {/* New Experiment Form */}
-        <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-6">
-          <h3 className="font-semibold mb-3 text-gray-900 dark:text-white">
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
+          <h3 className="text-sm font-semibold mb-3 text-gray-900">
             Start New Experiment
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
-              <label className="block text-sm text-gray-600 dark:text-gray-300 mb-1">
+              <label className="label">
                 Symbol
               </label>
               <select
                 value={newSymbol}
                 onChange={(e) => setNewSymbol(e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg dark:bg-gray-600 dark:border-gray-500 dark:text-white"
+                className="input"
               >
                 <option value="SPY">SPY</option>
                 <option value="QQQ">QQQ</option>
@@ -213,32 +213,32 @@ export function MLResearchStudio() {
               </select>
             </div>
             <div>
-              <label className="block text-sm text-gray-600 dark:text-gray-300 mb-1">
+              <label className="label">
                 Start Date
               </label>
               <input
                 type="date"
                 value={newStartDate}
                 onChange={(e) => setNewStartDate(e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg dark:bg-gray-600 dark:border-gray-500 dark:text-white"
+                className="input"
               />
             </div>
             <div>
-              <label className="block text-sm text-gray-600 dark:text-gray-300 mb-1">
+              <label className="label">
                 Random Seed
               </label>
               <input
                 type="number"
                 value={newSeed}
                 onChange={(e) => setNewSeed(parseInt(e.target.value))}
-                className="w-full px-3 py-2 border rounded-lg dark:bg-gray-600 dark:border-gray-500 dark:text-white"
+                className="input"
               />
             </div>
             <div className="flex items-end">
               <button
                 onClick={startExperiment}
                 disabled={submitting}
-                className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                className="btn-primary w-full disabled:opacity-50"
               >
                 {submitting ? 'Starting...' : 'Run Experiment'}
               </button>
@@ -255,7 +255,7 @@ export function MLResearchStudio() {
         {/* Experiments List */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="md:col-span-1">
-            <h3 className="font-semibold mb-3 text-gray-900 dark:text-white">
+            <h3 className="text-sm font-semibold mb-3 text-gray-900">
               Experiments
             </h3>
             <div className="space-y-2 max-h-96 overflow-y-auto">
@@ -267,25 +267,25 @@ export function MLResearchStudio() {
                   }}
                   className={`w-full text-left p-3 rounded-lg border transition-colors ${
                     showPublished
-                      ? 'bg-blue-50 border-blue-500 dark:bg-blue-900'
-                      : 'hover:bg-gray-50 dark:hover:bg-gray-700 border-gray-200 dark:border-gray-600'
+                      ? 'bg-primary-50 border-primary-600'
+                      : 'hover:bg-gray-50 border-gray-200'
                   }`}
                 >
-                  <div className="font-medium text-gray-900 dark:text-white">
+                  <div className="font-medium text-gray-900">
                     FR-07 committed results
                   </div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                  <div className="text-sm text-gray-500">
                     SPY · QQQ · NVDA · 252 test days
                   </div>
                   <div className="text-xs mt-1 text-green-600">preloaded</div>
                 </button>
               )}
               {experiments.length === 0 && !published ? (
-                <p className="text-gray-500 dark:text-gray-400 text-sm">
+                <p className="text-gray-500 text-sm">
                   No experiments yet. Run one above.
                 </p>
               ) : experiments.length === 0 ? (
-                <p className="text-gray-500 dark:text-gray-400 text-xs">
+                <p className="text-gray-500 text-xs">
                   New runs appear here. The table on the right is the committed README result.
                 </p>
               ) : (
@@ -298,14 +298,14 @@ export function MLResearchStudio() {
                     }}
                     className={`w-full text-left p-3 rounded-lg border transition-colors ${
                       selectedExperiment?.experiment_id === exp.experiment_id
-                        ? 'bg-blue-50 border-blue-500 dark:bg-blue-900'
-                        : 'hover:bg-gray-50 dark:hover:bg-gray-700 border-gray-200 dark:border-gray-600'
+                        ? 'bg-primary-50 border-primary-600'
+                        : 'hover:bg-gray-50 border-gray-200'
                     }`}
                   >
-                    <div className="font-medium text-gray-900 dark:text-white">
+                    <div className="font-medium text-gray-900">
                       {exp.symbol}
                     </div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                    <div className="text-sm text-gray-500">
                       {new Date(exp.created_at).toLocaleDateString()}
                     </div>
                     <div className={`text-xs mt-1 ${
@@ -320,7 +320,7 @@ export function MLResearchStudio() {
             </div>
             <button
               onClick={loadExperiments}
-              className="mt-3 text-sm text-blue-600 hover:text-blue-800"
+              className="mt-3 text-sm text-primary-600 hover:text-primary-800"
             >
               Refresh List
             </button>
@@ -335,7 +335,7 @@ export function MLResearchStudio() {
             ) : selectedExperiment ? (
               <ExperimentDetails experiment={selectedExperiment} />
             ) : (
-              <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+              <div className="text-center py-12 text-gray-500">
                 Select an experiment to view results
               </div>
             )}
@@ -362,8 +362,8 @@ function PublishedResultsPanel({ published }: { published: PublishedResults }) {
   return (
     <div className="space-y-6">
       <div>
-        <h4 className="font-semibold text-gray-900 dark:text-white">{published.title}</h4>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+        <h4 className="font-semibold text-gray-900">{published.title}</h4>
+        <p className="text-sm text-gray-500 mt-1">
           {published.data_source}. Test window: {published.test_period} ({published.n_test} observations).
         </p>
       </div>
@@ -382,22 +382,22 @@ function PublishedResultsPanel({ published }: { published: PublishedResults }) {
         <p className="text-sm text-gray-700 mt-2">{published.h1_summary}</p>
       </div>
 
-      <div className="overflow-x-auto border rounded-lg">
+      <div className="overflow-x-auto border border-gray-200 rounded-lg bg-white">
         <table className="w-full text-xs">
           <thead>
-            <tr className="bg-gray-100 dark:bg-gray-700">
-              <th className="px-2 py-2 text-left">Symbol</th>
-              <th className="px-2 py-2 text-left">H</th>
+            <tr className="bg-gray-50 border-b border-gray-200">
+              <th className="px-2 py-2 text-left font-medium text-gray-600">Symbol</th>
+              <th className="px-2 py-2 text-left font-medium text-gray-600">H</th>
               {models.map((m) => (
-                <th key={m.key} className="px-2 py-2 text-right">{m.label}</th>
+                <th key={m.key} className="px-2 py-2 text-right font-medium text-gray-600">{m.label}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {published.rows.map((row) => (
-              <tr key={`${row.symbol}-${row.horizon}`} className="border-t">
-                <td className="px-2 py-2 font-medium">{row.symbol}</td>
-                <td className="px-2 py-2">{row.horizon}</td>
+              <tr key={`${row.symbol}-${row.horizon}`} className="border-t border-gray-200">
+                <td className="px-2 py-2 font-medium text-gray-900">{row.symbol}</td>
+                <td className="px-2 py-2 text-gray-800">{row.horizon}</td>
                 {models.map((m) => {
                   const value = row[m.key] as number;
                   const ci = row[`${m.key}_ci` as keyof PublishedRow] as [number, number];
@@ -405,7 +405,9 @@ function PublishedResultsPanel({ published }: { published: PublishedResults }) {
                   return (
                     <td
                       key={m.key}
-                      className={`px-2 py-2 text-right font-mono ${isBest ? 'font-bold text-blue-700' : ''}`}
+                      className={`px-2 py-2 text-right font-mono ${
+                        isBest ? 'font-bold text-blue-700' : 'text-gray-800'
+                      }`}
                     >
                       {fmtCI(value, ci)}
                     </td>
@@ -415,62 +417,66 @@ function PublishedResultsPanel({ published }: { published: PublishedResults }) {
             ))}
           </tbody>
         </table>
-        <p className="text-xs text-gray-500 px-2 py-2">
-          QLIKE ± 95% CI (lower is better). Bold = best model on that row.
+        <p className="text-xs text-gray-500 px-2 py-2 bg-white">
+          QLIKE ± 95% CI (lower is better). Bold blue = best model on that row.
         </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="border rounded-lg overflow-hidden">
-          <div className="bg-gray-100 dark:bg-gray-700 px-3 py-2 font-medium text-sm">
+        <div className="border border-gray-200 rounded-lg overflow-hidden bg-white">
+          <div className="bg-gray-50 px-3 py-2 font-medium text-sm text-gray-900 border-b border-gray-200">
             XGBoost vs HAR-RV (DM)
           </div>
           <table className="w-full text-xs">
             <thead>
-              <tr className="border-b">
-                <th className="px-2 py-1 text-left">Case</th>
-                <th className="px-2 py-1 text-right">DM</th>
-                <th className="px-2 py-1 text-right">p</th>
-                <th className="px-2 py-1 text-center">Holm</th>
+              <tr className="border-b border-gray-200 bg-white">
+                <th className="px-2 py-1 text-left font-medium text-gray-600">Case</th>
+                <th className="px-2 py-1 text-right font-medium text-gray-600">DM</th>
+                <th className="px-2 py-1 text-right font-medium text-gray-600">p</th>
+                <th className="px-2 py-1 text-center font-medium text-gray-600">Holm</th>
               </tr>
             </thead>
             <tbody>
               {published.dm_tests.map((t) => (
-                <tr key={`${t.symbol}-${t.horizon}`} className="border-t">
-                  <td className="px-2 py-1">{t.symbol} {t.horizon}</td>
-                  <td className="px-2 py-1 text-right font-mono">{t.dm_stat.toFixed(2)}</td>
-                  <td className="px-2 py-1 text-right font-mono">{t.p_value.toFixed(3)}</td>
-                  <td className="px-2 py-1 text-center">{t.significant_after_holm ? '✓' : '✗'}</td>
+                <tr key={`${t.symbol}-${t.horizon}`} className="border-t border-gray-200">
+                  <td className="px-2 py-1 text-gray-900">{t.symbol} {t.horizon}</td>
+                  <td className="px-2 py-1 text-right font-mono text-gray-800">{t.dm_stat.toFixed(2)}</td>
+                  <td className="px-2 py-1 text-right font-mono text-gray-800">{t.p_value.toFixed(3)}</td>
+                  <td className={`px-2 py-1 text-center font-medium ${
+                    t.significant_after_holm ? 'text-green-700' : 'text-gray-500'
+                  }`}>{t.significant_after_holm ? '✓' : '✗'}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-        <div className="border rounded-lg overflow-hidden">
-          <div className="bg-gray-100 dark:bg-gray-700 px-3 py-2 font-medium text-sm">
+        <div className="border border-gray-200 rounded-lg overflow-hidden bg-white">
+          <div className="bg-gray-50 px-3 py-2 font-medium text-sm text-gray-900 border-b border-gray-200">
             Shuffle test (leakage check)
           </div>
           <table className="w-full text-xs">
             <thead>
-              <tr className="border-b">
-                <th className="px-2 py-1 text-left">Case</th>
-                <th className="px-2 py-1 text-right">Real</th>
-                <th className="px-2 py-1 text-right">Shuffled</th>
-                <th className="px-2 py-1 text-center">Edge</th>
+              <tr className="border-b border-gray-200 bg-white">
+                <th className="px-2 py-1 text-left font-medium text-gray-600">Case</th>
+                <th className="px-2 py-1 text-right font-medium text-gray-600">Real</th>
+                <th className="px-2 py-1 text-right font-medium text-gray-600">Shuffled</th>
+                <th className="px-2 py-1 text-center font-medium text-gray-600">Edge</th>
               </tr>
             </thead>
             <tbody>
               {published.shuffle_tests.map((t) => (
-                <tr key={`${t.symbol}-${t.horizon}`} className="border-t">
-                  <td className="px-2 py-1">{t.symbol} {t.horizon}</td>
-                  <td className="px-2 py-1 text-right font-mono">{t.real_qlike.toFixed(2)}</td>
-                  <td className="px-2 py-1 text-right font-mono">{t.shuffled_qlike.toFixed(2)}</td>
-                  <td className="px-2 py-1 text-center">{t.edge_preserved ? '✓' : '✗'}</td>
+                <tr key={`${t.symbol}-${t.horizon}`} className="border-t border-gray-200">
+                  <td className="px-2 py-1 text-gray-900">{t.symbol} {t.horizon}</td>
+                  <td className="px-2 py-1 text-right font-mono text-gray-800">{t.real_qlike.toFixed(2)}</td>
+                  <td className="px-2 py-1 text-right font-mono text-gray-800">{t.shuffled_qlike.toFixed(2)}</td>
+                  <td className={`px-2 py-1 text-center font-medium ${
+                    t.edge_preserved ? 'text-green-700' : 'text-amber-700'
+                  }`}>{t.edge_preserved ? '✓' : '✗'}</td>
                 </tr>
               ))}
             </tbody>
           </table>
-          <p className="text-xs text-gray-500 px-2 py-2">
+          <p className="text-xs text-gray-500 px-2 py-2 bg-white">
             NVDA 20d is the case where shuffled targets beat the real fit — treat that row as noise.
           </p>
         </div>
@@ -488,10 +494,10 @@ function ExperimentDetails({ experiment }: { experiment: ExperimentSummary }) {
   return (
     <div className="space-y-6">
       <div>
-        <h4 className="font-semibold mb-2 text-gray-900 dark:text-white">
+        <h4 className="font-semibold mb-2 text-gray-900">
           Experiment: {experiment.symbol}
         </h4>
-        <div className="text-sm text-gray-500 dark:text-gray-400">
+        <div className="text-sm text-gray-500">
           Created: {new Date(experiment.created_at).toLocaleString()} | 
           Status: <span className={experiment.status === 'completed' ? 'text-green-600' : 'text-red-600'}>
             {experiment.status}
@@ -506,20 +512,20 @@ function ExperimentDetails({ experiment }: { experiment: ExperimentSummary }) {
       </div>
 
       {/* Hypothesis Tests */}
-      <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-        <h5 className="font-semibold mb-3 text-gray-900 dark:text-white">
+      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+        <h5 className="font-semibold mb-3 text-gray-900">
           Hypothesis Tests
         </h5>
         <div className="space-y-2">
           {hypothesis_tests.map((test, i) => (
             <div key={i} className="flex items-center justify-between">
-              <span className="text-sm text-gray-700 dark:text-gray-300">
+              <span className="text-sm text-gray-700">
                 {test.hypothesis}
               </span>
               <span className={`px-2 py-1 rounded text-xs font-medium ${
                 test.result === 'SUPPORTED'
-                  ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                  : 'bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-200'
+                  ? 'bg-green-100 text-green-800'
+                  : 'bg-gray-100 text-gray-800'
               }`}>
                 {test.result}
               </span>
@@ -538,7 +544,7 @@ function ExperimentDetails({ experiment }: { experiment: ExperimentSummary }) {
 
       {/* Metrics Visualization */}
       <div>
-        <h5 className="font-semibold mb-3 text-gray-900 dark:text-white">
+        <h5 className="font-semibold mb-3 text-gray-900">
           Model Comparison
         </h5>
         <Plot
@@ -569,30 +575,30 @@ function ExperimentDetails({ experiment }: { experiment: ExperimentSummary }) {
 
 function MetricsTable({ title, metrics }: { title: string; metrics: MetricsRow[] }) {
   return (
-    <div className="bg-white dark:bg-gray-800 border dark:border-gray-600 rounded-lg overflow-hidden">
-      <div className="bg-gray-100 dark:bg-gray-700 px-4 py-2 font-medium text-gray-900 dark:text-white">
+    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+      <div className="bg-gray-50 px-4 py-2 font-medium text-gray-900 border-b border-gray-200">
         {title}
       </div>
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b dark:border-gray-600">
-            <th className="px-4 py-2 text-left text-gray-600 dark:text-gray-300">Model</th>
-            <th className="px-4 py-2 text-right text-gray-600 dark:text-gray-300">MAE</th>
-            <th className="px-4 py-2 text-right text-gray-600 dark:text-gray-300">RMSE</th>
-            <th className="px-4 py-2 text-right text-gray-600 dark:text-gray-300">QLIKE</th>
+          <tr className="border-b border-gray-200">
+            <th className="px-4 py-2 text-left font-medium text-gray-600">Model</th>
+            <th className="px-4 py-2 text-right font-medium text-gray-600">MAE</th>
+            <th className="px-4 py-2 text-right font-medium text-gray-600">RMSE</th>
+            <th className="px-4 py-2 text-right font-medium text-gray-600">QLIKE</th>
           </tr>
         </thead>
         <tbody>
           {metrics.map((m, i) => (
-            <tr key={i} className="border-b dark:border-gray-700">
-              <td className="px-4 py-2 text-gray-900 dark:text-white">{m.model}</td>
-              <td className="px-4 py-2 text-right text-gray-700 dark:text-gray-300">
+            <tr key={i} className="border-b border-gray-100">
+              <td className="px-4 py-2 text-gray-900">{m.model}</td>
+              <td className="px-4 py-2 text-right font-mono text-gray-800">
                 {m.mae?.toFixed(6) || '-'}
               </td>
-              <td className="px-4 py-2 text-right text-gray-700 dark:text-gray-300">
+              <td className="px-4 py-2 text-right font-mono text-gray-800">
                 {m.rmse?.toFixed(6) || '-'}
               </td>
-              <td className="px-4 py-2 text-right text-gray-700 dark:text-gray-300">
+              <td className="px-4 py-2 text-right font-mono text-gray-800">
                 {m.qlike?.toFixed(4) || '-'}
               </td>
             </tr>
@@ -607,27 +613,27 @@ function DMComparisonTable({ title, comparisons }: { title: string; comparisons:
   if (comparisons.length === 0) return null;
   
   return (
-    <div className="bg-white dark:bg-gray-800 border dark:border-gray-600 rounded-lg overflow-hidden">
-      <div className="bg-gray-100 dark:bg-gray-700 px-4 py-2 font-medium text-gray-900 dark:text-white">
+    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+      <div className="bg-gray-50 px-4 py-2 font-medium text-gray-900 border-b border-gray-200">
         {title}
       </div>
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b dark:border-gray-600">
-            <th className="px-3 py-2 text-left text-gray-600 dark:text-gray-300">Model</th>
-            <th className="px-3 py-2 text-right text-gray-600 dark:text-gray-300">DM Stat</th>
-            <th className="px-3 py-2 text-right text-gray-600 dark:text-gray-300">p-value</th>
-            <th className="px-3 py-2 text-center text-gray-600 dark:text-gray-300">Sig.</th>
+          <tr className="border-b border-gray-200">
+            <th className="px-3 py-2 text-left font-medium text-gray-600">Model</th>
+            <th className="px-3 py-2 text-right font-medium text-gray-600">DM Stat</th>
+            <th className="px-3 py-2 text-right font-medium text-gray-600">p-value</th>
+            <th className="px-3 py-2 text-center font-medium text-gray-600">Sig.</th>
           </tr>
         </thead>
         <tbody>
           {comparisons.map((c, i) => (
-            <tr key={i} className="border-b dark:border-gray-700">
-              <td className="px-3 py-2 text-gray-900 dark:text-white">{c.model}</td>
-              <td className="px-3 py-2 text-right text-gray-700 dark:text-gray-300">
+            <tr key={i} className="border-b border-gray-100">
+              <td className="px-3 py-2 text-gray-900">{c.model}</td>
+              <td className="px-3 py-2 text-right font-mono text-gray-800">
                 {c.dm_statistic?.toFixed(3) || '-'}
               </td>
-              <td className="px-3 py-2 text-right text-gray-700 dark:text-gray-300">
+              <td className="px-3 py-2 text-right font-mono text-gray-800">
                 {c.p_value?.toFixed(4) || '-'}
               </td>
               <td className="px-3 py-2 text-center">
