@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    ports:
+      - "8000:8000"
+    environment:
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+      - PYTHONPATH=/app/src:/app
+    volumes:
+      - ./data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    depends_on:
+      - backend
+
+  # Development service - runs both backend and frontend
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "8000:8000"
+      - "5173:5173"
+    volumes:
+      - .:/app
+      - /app/frontend/node_modules
+    environment:
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+      - PYTHONPATH=/app/src:/app
+    command: >
+      sh -c "
+        cd /app && pip install -e . &&
+        (cd /app/frontend && npm install && npm run dev &) &&
+        uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload
+      "

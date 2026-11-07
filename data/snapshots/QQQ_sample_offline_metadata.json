@@ -1,0 +1,20 @@
+{
+  "symbol": "QQQ",
+  "provider": "synthetic",
+  "spot": 495.0,
+  "observed_at": "2026-11-07T00:44:21.132777",
+  "expirations": [
+    "2026-11-14",
+    "2026-11-21",
+    "2026-11-28",
+    "2026-12-05",
+    "2026-12-12",
+    "2026-12-19"
+  ],
+  "total_contracts": 240,
+  "valid_contracts": 195,
+  "version": "1.0",
+  "note": "Synthetic data for testing - not real market quotes",
+  "snapshot_id": "QQQ_sample_offline",
+  "ingested_at": "2026-11-07T00:44:21.153822"
+}
