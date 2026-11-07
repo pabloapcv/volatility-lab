@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import Plot from 'react-plotly.js'
 import { volatility, data, SurfaceResponse, SmileResponse, TermStructureResponse } from '../api'
-import { BarChart3, RefreshCw, AlertTriangle, CheckCircle2, Layers } from 'lucide-react'
+import { RefreshCw, AlertTriangle, CheckCircle2, Layers } from 'lucide-react'
 
 type ViewMode = 'surface' | 'smile' | 'term'
 
@@ -73,8 +73,7 @@ export default function VolatilitySurfaceLab() {
             opacity: 0.9,
             showscale: true,
             colorbar: {
-              title: 'IV',
-              titleside: 'right',
+              title: { text: 'IV', side: 'right' },
             },
           },
           {
@@ -92,14 +91,14 @@ export default function VolatilitySurfaceLab() {
           },
         ]}
         layout={{
-          title: `${symbol} Implied Volatility Surface`,
+          title: { text: `${symbol} Implied Volatility Surface` },
           autosize: true,
           height: 500,
           margin: { l: 0, r: 0, t: 40, b: 0 },
           scene: {
-            xaxis: { title: 'Log Moneyness' },
-            yaxis: { title: 'Days to Expiry' },
-            zaxis: { title: 'Implied Vol' },
+            xaxis: { title: { text: 'Log Moneyness' } },
+            yaxis: { title: { text: 'Days to Expiry' } },
+            zaxis: { title: { text: 'Implied Vol' } },
             camera: {
               eye: { x: 1.5, y: 1.5, z: 0.8 },
             },
@@ -129,11 +128,11 @@ export default function VolatilitySurfaceLab() {
           },
         ]}
         layout={{
-          title: `${symbol} Volatility Smile (${smileData.expiry} days)`,
+          title: { text: `${symbol} Volatility Smile (${smileData.expiry} days)` },
           autosize: true,
           height: 400,
-          xaxis: { title: 'Log Moneyness (ln(K/F))' },
-          yaxis: { title: 'Implied Volatility', tickformat: '.1%' },
+          xaxis: { title: { text: 'Log Moneyness (ln(K/F))' } },
+          yaxis: { title: { text: 'Implied Volatility' }, tickformat: '.1%' },
           margin: { l: 60, r: 40, t: 60, b: 60 },
           annotations: smileData.atm_iv ? [
             {
@@ -166,11 +165,11 @@ export default function VolatilitySurfaceLab() {
           },
         ]}
         layout={{
-          title: `${symbol} ATM Volatility Term Structure`,
+          title: { text: `${symbol} ATM Volatility Term Structure` },
           autosize: true,
           height: 400,
-          xaxis: { title: 'Days to Expiry' },
-          yaxis: { title: 'ATM Implied Volatility', tickformat: '.1%' },
+          xaxis: { title: { text: 'Days to Expiry' } },
+          yaxis: { title: { text: 'ATM Implied Volatility' }, tickformat: '.1%' },
           margin: { l: 60, r: 40, t: 60, b: 60 },
         }}
         config={{ responsive: true }}

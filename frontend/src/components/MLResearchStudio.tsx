@@ -541,8 +541,8 @@ function ExperimentDetails({ experiment }: { experiment: ExperimentSummary }) {
           layout={{
             height: 300,
             margin: { l: 50, r: 20, t: 30, b: 80 },
-            xaxis: { title: 'Model', tickangle: -45 },
-            yaxis: { title: 'QLIKE (lower is better)' },
+            xaxis: { title: { text: 'Model' }, tickangle: -45 },
+            yaxis: { title: { text: 'QLIKE (lower is better)' } },
             paper_bgcolor: 'transparent',
             plot_bgcolor: 'transparent',
           }}
