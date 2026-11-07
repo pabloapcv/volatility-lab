@@ -17,8 +17,7 @@ import pandas as pd
 from numpy.typing import NDArray
 from scipy import interpolate
 
-from volatilitylab.pricing.black_scholes import OptionType
-from volatilitylab.volatility.implied_vol import ImpliedVolSolver, IVStatus
+from volatilitylab.volatility.implied_vol import implied_volatility_batch
 
 
 def _days_to_years(expiry_days: float) -> float:
@@ -46,6 +45,26 @@ def _tte_years_and_expiry_days(row, has_tte: bool, has_exp: bool) -> tuple[float
         now = pd.Timestamp.now()
         days = float((exp_date - now).days)
         days = max(days, 0.0)
+        return days / 365.0, days
+
+    raise ValueError("Need either 'time_to_expiry' or 'expiration'")
+
+
+def _tte_years_and_expiry_days_vector(
+    chain: pd.DataFrame, has_tte: bool, has_exp: bool
+) -> tuple[NDArray[np.floating], NDArray[np.floating]]:
+    """Vectorized (time_to_expiry_years, expiry_days) for a chain DataFrame."""
+    if has_tte:
+        tte = chain["time_to_expiry"].to_numpy(dtype=np.float64, copy=False)
+        stored_as_days = tte > 3.0
+        years = np.where(stored_as_days, tte / 365.0, tte)
+        days = np.where(stored_as_days, tte, tte * 365.0)
+        return years.astype(np.float64, copy=False), days.astype(np.float64, copy=False)
+
+    if has_exp:
+        exp_date = pd.to_datetime(chain["expiration"])
+        days = (exp_date - pd.Timestamp.now()).dt.days.to_numpy(dtype=np.float64)
+        days = np.maximum(days, 0.0)
         return days / 365.0, days
 
     raise ValueError("Need either 'time_to_expiry' or 'expiration'")
@@ -153,9 +172,8 @@ class VolatilitySurface:
             bid, ask (or mid_price)
         """
 
-        solver = ImpliedVolSolver()
-        points = []
-        warnings = []
+        points: list[SurfacePoint] = []
+        warnings: list[str] = []
 
         # Ensure we have required columns
         required = ["strike", "option_type"]
@@ -171,69 +189,125 @@ class VolatilitySurface:
         if not (has_bid_ask or has_mid):
             raise ValueError("Need either 'bid'/'ask' or 'mid_price' columns")
 
-        for _, row in chain.iterrows():
-            strike = float(row["strike"])
+        n = len(chain)
+        if n == 0:
+            metadata = SurfaceMetadata(
+                underlying=underlying,
+                spot=spot,
+                observed_at=observed_at,
+                risk_free_rate=risk_free_rate,
+                dividend_yield=dividend_yield,
+                n_observed_points=0,
+                n_interpolated_points=0,
+                n_extrapolated_points=0,
+                sparse_regions=["entire_surface"],
+                warnings=["Very few valid IV points - surface may be unreliable"],
+            )
+            surface = cls(points=points, metadata=metadata)
+            surface._build_interpolator()
+            return surface
 
-            # Time to expiry in years; expiry axis is always calendar days.
-            tte, expiry = _tte_years_and_expiry_days(row, has_tte=has_tte, has_exp=has_exp)
+        strike = chain["strike"].to_numpy(dtype=np.float64, copy=False)
+        tte, expiry = _tte_years_and_expiry_days_vector(chain, has_tte=has_tte, has_exp=has_exp)
+        opt_type_str = chain["option_type"].astype(str).str.lower()
+        is_call = opt_type_str.str.contains("call", regex=False).to_numpy()
 
-            if tte < min_tte:
-                continue
+        if has_bid_ask:
+            bid = pd.to_numeric(chain["bid"], errors="coerce").to_numpy(dtype=np.float64)
+            ask = pd.to_numeric(chain["ask"], errors="coerce").to_numpy(dtype=np.float64)
+            bid = np.nan_to_num(bid, nan=0.0)
+            ask = np.nan_to_num(ask, nan=0.0)
+            mid = np.where((bid > 0) & (ask > 0), (bid + ask) / 2.0, np.nan)
+        else:
+            mid = pd.to_numeric(chain["mid_price"], errors="coerce").to_numpy(dtype=np.float64)
+            bid = ask = None
 
-            # Get option type
-            opt_type_str = str(row["option_type"]).lower()
-            opt_type = OptionType.CALL if "call" in opt_type_str else OptionType.PUT
+        keep = (tte >= min_tte) & np.isfinite(mid) & (mid > 0)
+        if not np.any(keep):
+            metadata = SurfaceMetadata(
+                underlying=underlying,
+                spot=spot,
+                observed_at=observed_at,
+                risk_free_rate=risk_free_rate,
+                dividend_yield=dividend_yield,
+                n_observed_points=0,
+                n_interpolated_points=0,
+                n_extrapolated_points=0,
+                sparse_regions=["entire_surface"],
+                warnings=["Very few valid IV points - surface may be unreliable"],
+            )
+            surface = cls(points=points, metadata=metadata)
+            surface._build_interpolator()
+            return surface
 
-            # Get price
-            if has_bid_ask:
-                bid = float(row.get("bid", 0) or 0)
-                ask = float(row.get("ask", 0) or 0)
-                mid = (bid + ask) / 2 if bid > 0 and ask > 0 else None
-            else:
-                mid = float(row["mid_price"])
-                bid = ask = None
+        mid_iv = implied_volatility_batch(
+            mid[keep],
+            spot,
+            strike[keep],
+            tte[keep],
+            risk_free_rate,
+            is_call[keep],
+            dividend_yield,
+        )
+        in_bounds = np.isfinite(mid_iv) & (mid_iv >= iv_bounds[0]) & (mid_iv <= iv_bounds[1])
 
-            if mid is None or mid <= 0:
-                continue
-
-            # Solve for IV
-            result = solver.solve(mid, spot, strike, tte, risk_free_rate, opt_type, dividend_yield)
-
-            if result.status != IVStatus.SUCCESS:
-                continue
-
-            iv = result.iv
-            if iv is None or not (iv_bounds[0] <= iv <= iv_bounds[1]):
-                continue
-
-            # Calculate moneyness
-            forward = spot * np.exp((risk_free_rate - dividend_yield) * tte)
-            moneyness = np.log(strike / forward)
-
-            # Bid/Ask IV if available
-            bid_iv = ask_iv = None
-            if bid is not None and bid > 0:
-                bid_result = solver.solve(
-                    bid, spot, strike, tte, risk_free_rate, opt_type, dividend_yield
+        bid_iv_all = None
+        ask_iv_all = None
+        if bid is not None and ask is not None:
+            bid_keep = keep & (bid > 0)
+            ask_keep = keep & (ask > 0)
+            bid_iv_all = np.full(n, np.nan, dtype=np.float64)
+            ask_iv_all = np.full(n, np.nan, dtype=np.float64)
+            if np.any(bid_keep):
+                bid_iv_all[bid_keep] = implied_volatility_batch(
+                    bid[bid_keep],
+                    spot,
+                    strike[bid_keep],
+                    tte[bid_keep],
+                    risk_free_rate,
+                    is_call[bid_keep],
+                    dividend_yield,
                 )
-                if bid_result.status == IVStatus.SUCCESS:
-                    bid_iv = bid_result.iv
-            if ask is not None and ask > 0:
-                ask_result = solver.solve(
-                    ask, spot, strike, tte, risk_free_rate, opt_type, dividend_yield
+            if np.any(ask_keep):
+                ask_iv_all[ask_keep] = implied_volatility_batch(
+                    ask[ask_keep],
+                    spot,
+                    strike[ask_keep],
+                    tte[ask_keep],
+                    risk_free_rate,
+                    is_call[ask_keep],
+                    dividend_yield,
                 )
-                if ask_result.status == IVStatus.SUCCESS:
-                    ask_iv = ask_result.iv
 
+        kept_idx = np.where(keep)[0]
+        tte_k = tte[keep]
+        strike_k = strike[keep]
+        expiry_k = expiry[keep]
+        forward = spot * np.exp((risk_free_rate - dividend_yield) * tte_k)
+        moneyness = np.log(strike_k / forward)
+
+        for j, i in enumerate(kept_idx):
+            if not in_bounds[j]:
+                continue
+            b_iv = None
+            a_iv = None
+            if bid_iv_all is not None:
+                val = bid_iv_all[i]
+                if np.isfinite(val):
+                    b_iv = float(val)
+            if ask_iv_all is not None:
+                val = ask_iv_all[i]
+                if np.isfinite(val):
+                    a_iv = float(val)
             points.append(
                 SurfacePoint(
-                    strike=strike,
-                    expiry=expiry,
-                    iv=iv,
+                    strike=float(strike_k[j]),
+                    expiry=float(expiry_k[j]),
+                    iv=float(mid_iv[j]),
                     quality=DataQuality.OBSERVED,
-                    moneyness=moneyness,
-                    bid_iv=bid_iv,
-                    ask_iv=ask_iv,
+                    moneyness=float(moneyness[j]),
+                    bid_iv=b_iv,
+                    ask_iv=a_iv,
                 )
             )
 

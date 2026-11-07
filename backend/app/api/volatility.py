@@ -1,5 +1,6 @@
 """Volatility API endpoints."""
 
+from functools import lru_cache
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
@@ -16,12 +17,11 @@ from backend.app.schemas.volatility import (
     SmileResponse,
     SurfaceGridResponse,
     SurfacePoint,
-    SurfaceRequest,
     SurfaceResponse,
     TermStructurePoint,
     TermStructureResponse,
 )
-from volatilitylab.data.snapshots import SnapshotManager
+from volatilitylab.data.snapshots import SnapshotManager, load_snapshot
 from volatilitylab.pricing.black_scholes import OptionType as BSOptionType
 from volatilitylab.volatility.implied_vol import ImpliedVolSolver
 from volatilitylab.volatility.implied_vol import IVStatus as InternalIVStatus
@@ -31,6 +31,74 @@ from volatilitylab.volatility.surface import VolatilitySurface
 router = APIRouter(prefix="/volatility", tags=["volatility"])
 
 SNAPSHOT_DIR = Path("./data/snapshots")
+
+
+@lru_cache(maxsize=64)
+def _cached_surface(
+    snapshot_path: str,
+    mtime_ns: int,
+    spot: float,
+    risk_free_rate: float,
+    dividend_yield: float,
+    underlying: str,
+    observed_at: str,
+) -> VolatilitySurface:
+    """Build a surface once per snapshot file + pricing params (hosted hot path)."""
+    del mtime_ns  # part of the cache key so a rewritten parquet recomputes
+    df, _metadata = load_snapshot(snapshot_path)
+    return VolatilitySurface.from_option_chain(
+        df,
+        spot=spot,
+        risk_free_rate=risk_free_rate,
+        dividend_yield=dividend_yield,
+        underlying=underlying,
+        observed_at=observed_at,
+    )
+
+
+def _load_chain(symbol: str, snapshot_id: str | None):
+    """Return (parquet path, chain, metadata) for a symbol or explicit snapshot."""
+    manager = SnapshotManager(SNAPSHOT_DIR)
+    if snapshot_id:
+        snapshot_path = SNAPSHOT_DIR / f"{snapshot_id}_cleaned.parquet"
+        if not snapshot_path.exists():
+            raise HTTPException(status_code=404, detail=f"Snapshot {snapshot_id} not found")
+        df, metadata = load_snapshot(snapshot_path)
+        return snapshot_path, df, metadata
+
+    result = manager.load_latest(symbol.upper())
+    if result is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No snapshots available for {symbol}. Load chain first.",
+        )
+    df, metadata = result
+    sid = metadata.get("snapshot_id")
+    snapshot_path = SNAPSHOT_DIR / f"{sid}_cleaned.parquet"
+    return snapshot_path, df, metadata
+
+
+def _get_surface(
+    symbol: str,
+    snapshot_id: str | None,
+    risk_free_rate: float,
+    dividend_yield: float = 0.0,
+    observed_at: str | None = None,
+) -> tuple[VolatilitySurface, dict]:
+    snapshot_path, _df, metadata = _load_chain(symbol, snapshot_id)
+    spot = float(metadata.get("spot", 100))
+    obs = metadata.get("observed_at", "") if observed_at is None else observed_at
+    mtime_ns = snapshot_path.stat().st_mtime_ns if snapshot_path.exists() else 0
+    surface = _cached_surface(
+        str(snapshot_path.resolve()),
+        mtime_ns,
+        spot,
+        risk_free_rate,
+        dividend_yield,
+        symbol.upper(),
+        str(obs),
+    )
+    return surface, metadata
 
 
 def _convert_option_type(opt_type: OptionType) -> BSOptionType:
@@ -49,7 +117,7 @@ def _convert_data_quality(quality: InternalDataQuality) -> DataQuality:
 async def calculate_implied_volatility(request: ImpliedVolRequest) -> ImpliedVolResponse:
     """
     Calculate implied volatility from market price.
-    
+
     Uses Brent's method for root finding. Validates against no-arbitrage
     bounds and returns status indicating success or failure reason.
     """
@@ -64,7 +132,7 @@ async def calculate_implied_volatility(request: ImpliedVolRequest) -> ImpliedVol
             option_type=_convert_option_type(request.option_type),
             dividend_yield=request.dividend_yield,
         )
-        
+
         return ImpliedVolResponse(
             implied_volatility=result.iv,
             status=_convert_iv_status(result.status),
@@ -88,7 +156,7 @@ async def calculate_implied_volatility(request: ImpliedVolRequest) -> ImpliedVol
 async def calculate_bid_ask_iv(request: BidAskIVRequest) -> BidAskIVResponse:
     """
     Calculate implied volatility for bid, ask, and mid prices.
-    
+
     Returns separate IV values and statuses for each price level.
     """
     try:
@@ -103,14 +171,14 @@ async def calculate_bid_ask_iv(request: BidAskIVRequest) -> BidAskIVResponse:
             option_type=_convert_option_type(request.option_type),
             dividend_yield=request.dividend_yield,
         )
-        
+
         return BidAskIVResponse(
-            bid_iv=results['bid_iv'].iv,
-            ask_iv=results['ask_iv'].iv,
-            mid_iv=results['mid_iv'].iv,
-            bid_status=_convert_iv_status(results['bid_iv'].status),
-            ask_status=_convert_iv_status(results['ask_iv'].status),
-            mid_status=_convert_iv_status(results['mid_iv'].status),
+            bid_iv=results["bid_iv"].iv,
+            ask_iv=results["ask_iv"].iv,
+            mid_iv=results["mid_iv"].iv,
+            bid_status=_convert_iv_status(results["bid_iv"].status),
+            ask_status=_convert_iv_status(results["ask_iv"].status),
+            mid_status=_convert_iv_status(results["mid_iv"].status),
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -128,38 +196,19 @@ async def get_volatility_surface(
 ) -> SurfaceResponse:
     """
     Get volatility surface for a symbol.
-    
+
     Uses saved snapshot if snapshot_id provided, otherwise loads latest
     available snapshot. Returns observed points and optionally an
     interpolated grid for 3D visualization.
     """
     try:
-        manager = SnapshotManager(SNAPSHOT_DIR)
-        
-        if snapshot_id:
-            snapshot_path = SNAPSHOT_DIR / f"{snapshot_id}_cleaned.parquet"
-            if not snapshot_path.exists():
-                raise HTTPException(status_code=404, detail=f"Snapshot {snapshot_id} not found")
-            from volatilitylab.data.snapshots import load_snapshot
-            df, metadata = load_snapshot(snapshot_path)
-        else:
-            result = manager.load_latest(symbol.upper())
-            if result is None:
-                raise HTTPException(
-                    status_code=404, 
-                    detail=f"No snapshots available for {symbol}. Load chain first."
-                )
-            df, metadata = result
-        
-        # Build surface
-        surface = VolatilitySurface.from_option_chain(
-            df,
-            spot=metadata.get('spot', 100),
+        surface, metadata = _get_surface(
+            symbol,
+            snapshot_id,
             risk_free_rate=0.045,
-            underlying=symbol.upper(),
-            observed_at=metadata.get('observed_at', ''),
+            observed_at=None,
         )
-        
+
         # Convert points
         points = [
             SurfacePoint(
@@ -173,7 +222,7 @@ async def get_volatility_surface(
             )
             for p in surface.points
         ]
-        
+
         # Generate grid if requested
         grid = None
         if include_grid and len(surface.points) >= 4:
@@ -182,25 +231,24 @@ async def get_volatility_surface(
                 n_expiries=n_expiries,
             )
             grid = SurfaceGridResponse(
-                moneyness=grid_data['moneyness'].tolist(),
-                expiry=grid_data['expiry'].tolist(),
-                iv=[[float(v) if not (v != v) else None for v in row] for row in grid_data['iv']],
-                quality_mask=grid_data['quality_mask'].tolist(),
-                observed_points=grid_data['observed_points'],
+                moneyness=grid_data["moneyness"].tolist(),
+                expiry=grid_data["expiry"].tolist(),
+                iv=[[float(v) if not (v != v) else None for v in row] for row in grid_data["iv"]],
+                quality_mask=grid_data["quality_mask"].tolist(),
+                observed_points=grid_data["observed_points"],
             )
-        
-        provider = metadata.get('provider', 'unknown')
-        is_synthetic = (
-            str(provider).lower() in ('synthetic', 'demo')
-            or str(metadata.get('snapshot_id', '')).endswith('_sample_offline')
-        )
+
+        provider = metadata.get("provider", "unknown")
+        is_synthetic = str(provider).lower() in ("synthetic", "demo") or str(
+            metadata.get("snapshot_id", "")
+        ).endswith("_sample_offline")
         meta = {
             **surface.metadata.__dict__,
-            'provider': provider,
-            'snapshot_id': metadata.get('snapshot_id'),
-            'is_synthetic': is_synthetic,
-            'note': metadata.get('note'),
-            'source_label': (
+            "provider": provider,
+            "snapshot_id": metadata.get("snapshot_id"),
+            "is_synthetic": is_synthetic,
+            "note": metadata.get("note"),
+            "source_label": (
                 f"Synthetic demo fallback — not live market quotes"
                 if is_synthetic
                 else f"yfinance · {str(metadata.get('observed_at', ''))[:10]}"
@@ -227,29 +275,15 @@ async def get_volatility_smile(
 ) -> SmileResponse:
     """
     Get volatility smile at a specific expiry.
-    
+
     Returns strikes, IVs, moneyness, and quality flags for each point,
     plus ATM IV, skew, and convexity estimates.
     """
     try:
-        manager = SnapshotManager(SNAPSHOT_DIR)
-        
-        if snapshot_id:
-            from volatilitylab.data.snapshots import load_snapshot
-            snapshot_path = SNAPSHOT_DIR / f"{snapshot_id}_cleaned.parquet"
-            df, metadata = load_snapshot(snapshot_path)
-        else:
-            result = manager.load_latest(symbol.upper())
-            if result is None:
-                raise HTTPException(status_code=404, detail=f"No snapshots for {symbol}")
-            df, metadata = result
-        
-        surface = VolatilitySurface.from_option_chain(
-            df, spot=metadata.get('spot', 100), underlying=symbol.upper()
-        )
-        
+        surface, metadata = _get_surface(symbol, snapshot_id, risk_free_rate=0.05)
+
         smile = surface.get_smile(expiry=expiry_days, n_strikes=n_strikes)
-        
+
         return SmileResponse(
             expiry=smile.expiry,
             time_to_expiry=smile.time_to_expiry,
@@ -275,28 +309,14 @@ async def get_term_structure(
 ) -> TermStructureResponse:
     """
     Get ATM (or fixed moneyness) volatility term structure.
-    
+
     Returns IV at each available expiry sorted by time to expiration.
     """
     try:
-        manager = SnapshotManager(SNAPSHOT_DIR)
-        
-        if snapshot_id:
-            from volatilitylab.data.snapshots import load_snapshot
-            snapshot_path = SNAPSHOT_DIR / f"{snapshot_id}_cleaned.parquet"
-            df, metadata = load_snapshot(snapshot_path)
-        else:
-            result = manager.load_latest(symbol.upper())
-            if result is None:
-                raise HTTPException(status_code=404, detail=f"No snapshots for {symbol}")
-            df, metadata = result
-        
-        surface = VolatilitySurface.from_option_chain(
-            df, spot=metadata.get('spot', 100), underlying=symbol.upper()
-        )
-        
+        surface, metadata = _get_surface(symbol, snapshot_id, risk_free_rate=0.05)
+
         term_structure = surface.get_term_structure(moneyness=moneyness)
-        
+
         return TermStructureResponse(
             points=[
                 TermStructurePoint(
@@ -309,7 +329,7 @@ async def get_term_structure(
                 for p in term_structure
             ],
             underlying=symbol.upper(),
-            spot=metadata.get('spot', 100),
+            spot=metadata.get("spot", 100),
         )
     except HTTPException:
         raise

@@ -4,6 +4,7 @@ from volatilitylab.volatility.implied_vol import (
     ImpliedVolResult,
     ImpliedVolSolver,
     implied_volatility,
+    implied_volatility_batch,
 )
 from volatilitylab.volatility.surface import (
     SmileSlice,
@@ -15,6 +16,7 @@ from volatilitylab.volatility.surface import (
 __all__ = [
     "ImpliedVolSolver",
     "implied_volatility",
+    "implied_volatility_batch",
     "ImpliedVolResult",
     "VolatilitySurface",
     "SurfacePoint",

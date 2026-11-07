@@ -8,6 +8,7 @@ Tests include:
 - Bid/Ask/Mid IV
 """
 
+import numpy as np
 from hypothesis import assume, given, settings
 from hypothesis import strategies as st
 
@@ -482,3 +483,70 @@ class TestPropertyBased:
             IVStatus.INVALID_INPUT,
             IVStatus.CONVERGENCE_FAILED,
         ]
+
+
+class TestImpliedVolBatch:
+    """Vectorized IV must match the scalar Brent solver."""
+
+    def test_batch_matches_scalar_round_trip(self):
+        from volatilitylab.volatility.implied_vol import implied_volatility_batch
+
+        spots = np.array([100.0, 100.0, 50.0, 200.0])
+        strikes = np.array([100.0, 110.0, 50.0, 180.0])
+        ttes = np.array([0.5, 0.25, 1.0, 0.1])
+        vols = np.array([0.20, 0.35, 0.15, 0.40])
+        is_call = np.array([True, True, False, False])
+        prices = np.array(
+            [
+                float(
+                    black_scholes_price(
+                        spots[i],
+                        strikes[i],
+                        ttes[i],
+                        0.05,
+                        vols[i],
+                        OptionType.CALL if is_call[i] else OptionType.PUT,
+                    )
+                )
+                for i in range(len(spots))
+            ]
+        )
+        batch = implied_volatility_batch(prices, spots, strikes, ttes, 0.05, is_call, 0.0)
+        np.testing.assert_allclose(batch, vols, atol=1e-6)
+
+    def test_batch_matches_solver_on_spy_sample(self):
+        from pathlib import Path
+
+        from volatilitylab.data.snapshots import SnapshotManager
+        from volatilitylab.volatility.implied_vol import implied_volatility_batch
+
+        result = SnapshotManager(Path("./data/snapshots")).load_latest("SPY")
+        assert result is not None
+        df, meta = result
+        sample = df.iloc[:: max(1, len(df) // 40)].head(40)
+        spot = float(meta["spot"])
+        tte = sample["time_to_expiry"].to_numpy(dtype=float)
+        stored_as_days = tte > 3.0
+        years = np.where(stored_as_days, tte / 365.0, tte)
+        strike = sample["strike"].to_numpy(dtype=float)
+        is_call = sample["option_type"].astype(str).str.lower().str.contains("call").to_numpy()
+        bid = np.nan_to_num(sample["bid"].to_numpy(dtype=float), nan=0.0)
+        ask = np.nan_to_num(sample["ask"].to_numpy(dtype=float), nan=0.0)
+        mid = np.where((bid > 0) & (ask > 0), (bid + ask) / 2.0, np.nan)
+        keep = np.isfinite(mid) & (mid > 0) & (years >= 1.0 / 365.0)
+        solver = ImpliedVolSolver()
+        scalar = []
+        for i, ok in enumerate(keep):
+            if not ok:
+                scalar.append(np.nan)
+                continue
+            opt = OptionType.CALL if is_call[i] else OptionType.PUT
+            res = solver.solve(float(mid[i]), spot, float(strike[i]), float(years[i]), 0.045, opt)
+            scalar.append(res.iv if res.status == IVStatus.SUCCESS else np.nan)
+        scalar = np.array(scalar, dtype=float)
+        batch = implied_volatility_batch(mid, spot, strike, years, 0.045, is_call, 0.0)
+        both_nan = np.isnan(scalar) & np.isnan(batch)
+        both_ok = np.isfinite(scalar) & np.isfinite(batch)
+        assert np.all(both_nan | both_ok)
+        if np.any(both_ok):
+            np.testing.assert_allclose(batch[both_ok], scalar[both_ok], atol=1e-6)
