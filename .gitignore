@@ -105,3 +105,15 @@ tmp/
 temp/
 *.tmp
 *.temp
+
+# Playwright / screenshot tooling
+playwright-report/
+test-results/
+blob-report/
+.playwright/
+
+# Coverage extras
+coverage.json
+
+# Editor / agent
+.cursor/
